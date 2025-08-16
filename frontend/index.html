@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>YouTube Multi-Channel Dashboard (MVP)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; margin:0; padding:24px}
+    .card{border:1px solid #e5e7eb; border-radius:12px; padding:16px; max-width:640px}
+  </style>
+</head>
+<body>
+  <h1>YT Multi-Channel Dashboard</h1>
+  <div class="card">
+    <p>Status: <span id="status">checking…</span></p>
+  </div>
+  <script>
+    // For Day 1, assume backend runs locally on port 8000
+    fetch("http://localhost:8000/health")
+      .then(r => r.json())
+      .then(j => document.getElementById("status").textContent = j.status || "unknown")
+      .catch(() => document.getElementById("status").textContent = "offline");
+  </script>
+</body>
+</html>
