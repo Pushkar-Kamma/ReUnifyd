@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ReUnifyd </title>
+  <meta name="description" content="A unified, futuristic dashboard for small multi‑channel YouTubers. Compare views, revenue, RPM, and more across channels at a glance. Join the waitlist." />
+  <meta property="og:title" content="Multichannel YouTube Dashboard — Unified Analytics" />
+  <meta property="og:description" content="One clean dashboard. All your channels. Side‑by‑side metrics and alerts. Join the waitlist." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#ECEDEE" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="home.css"> 
+</head>
+<body>
+  <!-- NAV -->
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="#top" class="brand" aria-label="Product home">
+        <div class="logo" aria-hidden="true">
+          <!-- simple futuristic glyph -->
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo">
+            <defs>
+              <linearGradient id="g" x1="0" y1="0" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#9AA4AE"/>
+                <stop offset="1" stop-color="#E5E9F0"/>
+              </linearGradient>
+            </defs>
+            <rect x="1" y="1" width="20" height="20" rx="6" fill="url(#g)"/>
+            <path d="M6 14c2.2-1.6 4.4-1.6 6.6 0 1.1.8 2.2 1.2 3.4 1.2" stroke="#0f1115" stroke-opacity=".55" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="7.5" cy="8" r="1.2" fill="#0f1115" fill-opacity=".65"/>
+            <circle cx="14.5" cy="8" r="1.2" fill="#0f1115" fill-opacity=".65"/>
+          </svg>
+        </div>
+        <span>ReUnifyd</span>
+      </a>
+      <nav class="nav-actions">
+        <a class="btn" href="#features">Features</a>
+        <a class="btn" href="#faq">FAQ</a>
+        <a class="btn primary" href="#waitlist">Join Waitlist</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <div class="container">
+      <span class="eyebrow">🚀 One dashboard • All your channels</span>
+      <h1>Unified YouTube analytics for multi‑channel creators</h1>
+      <p>
+        Stop tab‑hopping. See views, revenue, RPM, watch time, and growth across all your channels—side by side—on a single, fast, minimal dashboard.
+      </p>
+      <div class="hero-cta">
+        <a class="btn primary" href="#waitlist">Get early access</a>
+        <a class="btn" href="#survey" aria-label="Open demand survey">Take demand survey</a>
+      </div>
+
+      <!-- Mock Preview -->
+      <div class="preview card" role="img" aria-label="Product preview: side-by-side channel comparison">
+        <div class="preview-inner">
+          <div class="panel">
+            <h4>Today at a glance</h4>
+            <div class="kpi-grid" aria-hidden="true">
+              <div class="kpi">
+                <div class="label">Total Views</div>
+                <div class="value">128,940</div>
+                <div class="trend" style="color:var(--ok)">+12.4%</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Revenue</div>
+                <div class="value">$2,840</div>
+                <div class="trend" style="color:var(--ok)">+8.1%</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Avg RPM</div>
+                <div class="value">$2.20</div>
+                <div class="trend" style="color:var(--warn)">–3.2%</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <h4>Channel‑to‑channel comparison</h4>
+            <div class="kpi-grid" aria-hidden="true">
+              <div class="kpi">
+                <div class="label">Main • Views</div>
+                <div class="value">78,410</div>
+                <div class="trend" style="color:var(--ok)">+9%</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Clips • Views</div>
+                <div class="value">36,570</div>
+                <div class="trend" style="color:var(--ok)">+15%</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Shorts • Views</div>
+                <div class="value">13,960</div>
+                <div class="trend" style="color:var(--warn)">–2%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container" style="margin-top: 6px;">
+        <div class="badges">
+          <span class="badge">Futuristic • Minimal • Silver</span>
+          <span class="badge">Privacy‑first OAuth</span>
+          <span class="badge">No uploads • Pure analytics</span>
+          <span class="badge">Alerts & Benchmarks</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUE PROPS -->
+  <section class="section" id="features">
+    <div class="container">
+      <h2>Why creators want this</h2>
+      <p class="lead">Built for small multi‑channel YouTubers who need real clarity—without opening five tabs and a spreadsheet.</p>
+
+      <div class="grid">
+        <div class="col-4">
+          <div class="feature">
+            <h3>Unified view</h3>
+            <p>All channels in one dashboard with side‑by‑side KPIs: Views, Revenue, RPM, Watch Time, Subscribers, CTR, and more.</p>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="feature">
+            <h3>Smart comparisons</h3>
+            <p>Compare any metric across channels or periods. See which channel pulls revenue vs. growth, instantly.</p>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="feature">
+            <h3>Signals, not noise</h3>
+            <p>Surface anomalies and alerts (e.g., RPM drop on Clips). Weekly email summary to keep you focused.</p>
+          </div>
+        </div>
+
+        <div class="col-4">
+          <div class="feature">
+            <h3>Creator‑friendly pricing</h3>
+            <p>Transparent, month‑to‑month. Free tier for tiny channels; scale as you grow.</p>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="feature">
+            <h3>Secure by design</h3>
+            <p>OAuth login with granular scopes; we never see your password. Read‑only analytics; no publishing rights.</p>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="feature">
+            <h3>Fast & minimal</h3>
+            <p>Light UI tuned for speed. Silver‑white theme that looks great in thumbnails and on stream.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOCIAL PROOF (MVP placeholders) -->
+  <section class="section">
+    <div class="container">
+      <div class="card" style="padding:22px;">
+        <div class="grid" style="align-items:center;">
+          <div class="col-6">
+            <h2>Built with creator input</h2>
+            <p class="lead">We’re co‑designing with small creators (1–10 channels). Join and help shape what ships.</p>
+            <div class="badges" style="margin-top:12px;">
+              <span class="badge">Alpha cohort forming</span>
+              <span class="badge">3‑minute survey</span>
+              <span class="badge">Early adopter perks</span>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="feature">
+              <h3>What you’ll get first</h3>
+              <p>• Unified KPIs • Cross‑channel compare • Week‑over‑week deltas • RPM/CPM insights • Email summaries • Alerts</p>
+            </div>
+            <div class="feature" style="margin-top:10px;">
+              <h3>What’s after</h3>
+              <p>• Multi‑account teams • Custom tags • Creator benchmarks • Forecasting • API export</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WAITLIST -->
+  <section class="section" id="waitlist">
+    <div class="container">
+      <div class="card waitlist">
+        <div>
+          <h2>Join the waitlist</h2>
+          <p class="lead">Get early access, updates, and a chance to influence the roadmap. No spam. Unsubscribe anytime.</p>
+        </div>
+        <form id="wl" class="field" aria-label="Waitlist form" novalidate>
+          <input type="email" id="email" name="email" autocomplete="email" placeholder="you@channelname.com" aria-label="Email address" required />
+          <button class="btn primary" type="submit">Request Invite</button>
+          <div class="note" id="wl-note" style="grid-column:1/-1;">By joining, you agree to our <a href="#" aria-label="Open privacy policy">privacy policy</a>.</div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- SURVEY CTA -->
+  <section class="section" id="survey">
+    <div class="container">
+      <div class="card" style="padding:22px; display:grid; gap:12px; align-items:center; grid-template-columns:1fr auto;">
+        <div>
+          <h2>Help us validate demand</h2>
+          <p class="lead">Take a quick 8‑question survey. Tell us how you manage multiple channels today and what would save you the most time.</p>
+        </div>
+        <a class="btn" href="https://forms.gle/your-google-forms-id" target="_blank" rel="noopener" aria-label="Open demand survey">Open Survey →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="container">
+      <h2>FAQ</h2>
+      <details>
+        <summary>How do you connect to my channels?</summary>
+        <p>Via YouTube’s official OAuth and Analytics APIs with read‑only scopes. You can revoke access anytime in Google Account Security.</p>
+      </details>
+      <details>
+        <summary>Will you be able to post or edit videos?</summary>
+        <p>No. The MVP is analytics‑only. No upload, edit, or publish permissions will be requested.</p>
+      </details>
+      <details>
+        <summary>What does pricing look like?</summary>
+        <p>We’re testing pricing with early users. Expect a free tier for very small channels, then paid tiers based on # of channels and data refresh frequency.</p>
+      </details>
+      <details>
+        <summary>When is launch?</summary>
+        <p>We’re assembling an alpha cohort now. Waitlist signups will be invited in small batches so we can iterate quickly on feedback.</p>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container" style="display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;">
+      <div>© <span id="y"></span> ReUnifyd</div>
+      <div class="badges">
+        <span class="badge">Made for creators</span>
+        <a class="badge" href="#survey">Take the survey</a>
+        <a class="badge" href="#waitlist">Join waitlist</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Footer year
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // Lightweight waitlist handler (MVP):
+    // 1) Validates email
+    // 2) Sends to Formspree or your FastAPI endpoint (replace WAITLIST_ENDPOINT)
+    // 3) Falls back to localStorage if offline/failed (you can export later)
+
+    const WAITLIST_ENDPOINT = 'https://formspree.io/f/your-form-id'; // TODO: replace with your endpoint
+
+    const wl = document.getElementById('wl');
+    const note = document.getElementById('wl-note');
+    const emailEl = document.getElementById('email');
+
+    wl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailEl.value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(email)) {
+        note.textContent = 'Please enter a valid email.';
+        note.style.color = '#b91c1c';
+        emailEl.focus();
+        return;
+      }
+
+      // optimistic UI
+      const prev = note.textContent;
+      note.textContent = 'Submitting…';
+      note.style.color = '';
+
+      try {
+        const res = await fetch(WAITLIST_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, source: 'landing', ts: Date.now() })
+        });
+
+        if (res.ok) {
+          wl.reset();
+          note.textContent = 'You\'re on the list! Check your inbox for a confirmation.';
+          note.style.color = '#065f46';
+        } else {
+          throw new Error('Network response not ok');
+        }
+      } catch (err) {
+        // Fallback store
+        const key = 'wl_offline_queue';
+        const queue = JSON.parse(localStorage.getItem(key) || '[]');
+        queue.push({ email, ts: Date.now() });
+        localStorage.setItem(key, JSON.stringify(queue));
+        wl.reset();
+        note.textContent = 'Saved locally—will retry when online. You can also email us: hello@rayfield.ai';
+        note.style.color = '#92400e';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+:root {
+    --bg: #f5f6f7;            /* soft white */
+    --bg-2: #eef0f2;          /* silver tint */
+    --ink-1: #0f1115;         /* primary text */
+    --ink-2: #4b4f58;         /* secondary */
+    --accent: #3a77ff;        /* call-to-action */
+    --accent-2: #8aa4ff;      /* hover */
+    --ring: rgba(58,119,255,.35);
+    --glass: rgba(255,255,255,.55);
+    --border: rgba(12,18,28,.06);
+    --ok: #22c55e;
+    --warn: #f59e0b;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    color: var(--ink-1);
+    background: linear-gradient(180deg, #fafafa, #f1f3f5 35%, #eceff1 100%);
+    letter-spacing: .01em;
+  }
+
+  /* Layout */
+  .container { width: min(1120px, 92vw); margin-inline: auto; }
+  header.nav {
+    position: sticky; top: 0; z-index: 40; backdrop-filter: blur(10px);
+    background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+    border-bottom: 1px solid var(--border); padding: 10px 0;
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+    background: radial-gradient(100% 100% at 50% 0%, #fefefe 0%, #e6eaee 100%);
+    box-shadow: inset 0 0 0 1px var(--border), 0 10px 20px rgba(0,0,0,.04);
+  }
+  .brand span { font-weight: 700; letter-spacing: .02em; }
+  .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+  /* Buttons */
+  .btn { --h: 48px; height: var(--h); padding: 0 18px; border-radius: 12px; border: 1px solid var(--border);
+    display: inline-flex; align-items: center; gap: 10px; text-decoration: none; cursor: pointer;
+    background: linear-gradient(180deg, #ffffff, #f1f4f8); font-weight: 600; color: var(--ink-1);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), 0 2px 6px rgba(12,18,28,.06);
+    transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(12,18,28,.08); }
+  .btn:active { transform: translateY(0); }
+  .btn.primary { color: white; border-color: transparent; background: linear-gradient(180deg, var(--accent), #2d5efb); box-shadow: 0 6px 16px rgba(58,119,255,.35); }
+  .btn.primary:hover { background: linear-gradient(180deg, #4a86ff, #2b57ea); box-shadow: 0 10px 26px rgba(58,119,255,.4); }
+
+  /* Hero */
+  .hero { padding: 72px 0 36px; position: relative; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: linear-gradient(180deg, #ffffff, #f5f7f9); color: var(--ink-2); font-weight: 600; font-size: 13px; }
+  .hero h1 { font-size: clamp(32px, 5vw, 56px); line-height: 1.05; margin: 16px 0 14px; letter-spacing: -.02em; }
+  .hero p { font-size: clamp(16px, 2.5vw, 18px); color: var(--ink-2); margin: 0 0 28px; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  /* Glass card */
+  .card {
+    background: var(--glass);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(20, 23, 28, 0.06);
+  }
+
+  /* Mock dashboard preview */
+  .preview { margin: 40px auto 10px; padding: 18px; }
+  .preview-inner { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  .panel { padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: linear-gradient(180deg, #ffffff, #f4f6f8); }
+  .panel h4 { margin: 4px 0 12px; font-size: 14px; color: var(--ink-2); font-weight: 600; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .kpi { padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: #fff; }
+  .kpi .label { font-size: 12px; color: var(--ink-2); }
+  .kpi .value { font-size: 18px; font-weight: 700; }
+  .trend { font-size: 12px; font-weight: 600; }
+
+  /* Value props */
+  .section { padding: 64px 0; }
+  .section h2 { font-size: clamp(24px, 4vw, 36px); letter-spacing: -.01em; margin: 0 0 14px; }
+  .section p.lead { color: var(--ink-2); margin: 0 0 26px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+  .col-4 { grid-column: span 4; }
+  .col-6 { grid-column: span 6; }
+  .col-12 { grid-column: span 12; }
+
+  .feature { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: linear-gradient(180deg, #ffffff, #f6f7f9); }
+  .feature h3 { margin: 8px 0 6px; font-size: 16px; }
+  .feature p { margin: 0; color: var(--ink-2); font-size: 14px; }
+
+  /* Waitlist */
+  .waitlist { padding: 22px; display: grid; gap: 12px; align-items: center; grid-template-columns: 1fr auto; }
+  .waitlist .field { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+  input[type="email"] {
+    height: 48px; border-radius: 12px; border: 1px solid var(--border); padding: 0 14px; font-size: 16px;
+    background: linear-gradient(180deg, #ffffff, #f4f6f8);
+    outline: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.65);
+  }
+  input[type="email"]:focus { box-shadow: 0 0 0 5px var(--ring); }
+  .note { font-size: 12px; color: var(--ink-2); }
+
+  /* Social proof & FAQ */
+  .badges { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .badge { padding: 8px 12px; border: 1px dashed var(--border); border-radius: 999px; font-weight: 600; font-size: 12px; background: #fff; }
+
+  details { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: #fff; }
+  details + details { margin-top: 10px; }
+  summary { cursor: pointer; font-weight: 600; }
+  summary::-webkit-details-marker { display: none; }
+
+  /* Footer */
+  footer { padding: 40px 0 56px; color: var(--ink-2); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .preview-inner { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: repeat(6, 1fr); }
+    .col-6 { grid-column: span 6; }
+    .col-4 { grid-column: span 6; }
+  }
+  @media (max-width: 560px) {
+    .hero { padding-top: 54px; }
+    .waitlist { grid-template-columns: 1fr; }
+    .waitlist .field { grid-template-columns: 1fr; }
+  }
