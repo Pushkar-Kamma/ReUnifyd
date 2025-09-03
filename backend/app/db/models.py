@@ -14,6 +14,14 @@ from app.core.crypto import encrypt_str, decrypt_str  # uses your existing crypt
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(index=True, unique=True)
+    # Local auth fields (optional to keep Google-only flow working)
+    username: Optional[str] = Field(default=None, index=True, unique=True)
+    password_hash: Optional[str] = None
+    # How many channels the user intends to link. None = unlimited.
+    link_quota: Optional[int] = None
+    # manual refresh tracking (per day limit)
+    manual_refresh_date: Optional[dt.date] = None
+    manual_refresh_count: int = 0
     created_at: dt.datetime = Field(default_factory=dt.datetime.utcnow)
 
 
@@ -93,6 +101,8 @@ class VideoMap(SQLModel, table=True):
     title: str
     published_at: Optional[dt.datetime] = None
     status: str = "active"  # active | private | deleted
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
 
 
 # -----------------------
@@ -125,3 +135,30 @@ class MetricDaily(SQLModel, table=True):
     rpm_minor: Optional[int] = None
     playback_cpm_minor: Optional[int] = None
     currency: Optional[str] = None
+    # Additional video metrics
+    end_screen_ctr_pct: Optional[float] = None
+    shorts_swipe_vs_view_pct: Optional[float] = None
+
+
+# -----------------------
+# Daily breakdowns (generic)
+# -----------------------
+class MetricBreakdownDaily(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    channel_id: int = Field(index=True, foreign_key="channel.id")
+    video_id: Optional[str] = Field(default=None, index=True)
+    date: dt.date = Field(index=True)
+
+    # dimension kind and key values (e.g., device/country/traffic/age/gender)
+    dimension: str = Field(index=True)
+    key: str = Field(index=True)
+
+    # core metrics
+    views: int = 0
+    watch_time_min: int = 0
+    impressions: Optional[int] = None
+    impressions_ctr_pct: Optional[float] = None
+    likes: Optional[int] = None
+    subs_gained: Optional[int] = None
+    subs_lost: Optional[int] = None
+    est_revenue_minor: Optional[int] = None

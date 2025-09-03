@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from fastapi import Request
+import httpx
 from sqlmodel import Session, select
 from ..db.models import GoogleAccount, Channel
 from app.core.crypto import encrypt_str, decrypt_str
+from app.core.settings import settings
 
 
 def _get_refresh_token_from_ga(ga: GoogleAccount) -> str | None:
@@ -103,7 +105,6 @@ async def refresh_and_persist_access_token(
     Use the stored refresh token to obtain a new access token (and possibly a rotated refresh token).
     Persist tokens encrypted; update GA status/timestamps.
     """
-    oauth = request.app.state.oauth
     token_url = getattr(
         request.app.state, "oauth_token_url", "https://oauth2.googleapis.com/token"
     )
@@ -112,11 +113,41 @@ async def refresh_and_persist_access_token(
     if not rt:
         raise RuntimeError("No refresh token stored; user must re-consent.")
 
+    # Perform a direct token refresh POST to Google's endpoint to avoid
+    # integration-specific client methods that may be unavailable.
+    client_id = (
+        getattr(settings, "google_client_id", None)
+        or getattr(settings, "GOOGLE_CLIENT_ID", None)
+    )
+    client_secret = (
+        getattr(settings, "google_client_secret", None)
+        or getattr(settings, "GOOGLE_CLIENT_SECRET", None)
+    )
+    if not client_id or not client_secret:
+        raise RuntimeError("OAuth client not configured")
+
     try:
-        refreshed = await oauth.google.refresh_token(
-            url=token_url,
-            refresh_token=rt,
-        )
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                token_url,
+                data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": rt,
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        if resp.status_code >= 400:
+            try:
+                err = resp.json()
+            except Exception:
+                err = {"error": resp.text}
+            ga.status = "revoked"
+            session.add(ga)
+            session.commit()
+            raise RuntimeError(f"Failed to refresh access token: {err}")
+        refreshed = resp.json()
     except Exception as e:
         ga.status = "revoked"
         session.add(ga)

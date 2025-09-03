@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReUnifyd • Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; margin:0; }
+    .header { position:sticky; top:0; background:#fff; border-bottom:1px solid #e5e7eb; padding:14px 0; }
+    .header-inner { max-width:1200px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; }
+    .logo { display:flex; align-items:center; gap:12px; }
+    .logo-icon { width:40px; height:40px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius:12px; display:grid; place-items:center; color:#fff; font-weight:700; }
+    .container { max-width:1200px; margin: 24px auto; padding: 0 20px; }
+    .row { display:grid; grid-template-columns: 260px 1fr; gap: 20px; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; }
+    .sidebar { padding:12px; }
+    .channel { display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; cursor:pointer; border-left:4px solid transparent; }
+    .channel:hover { background:#f9fafb; }
+    .thumb { width:36px; height:36px; border-radius:8px; background:#f3f4f6; display:grid; place-items:center; font-weight:700; color:#ef4444; overflow:hidden; }
+    .main { padding:14px; }
+    .toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; }
+    .seg { display:inline-flex; background:#f3f4f6; border-radius:10px; padding:3px; }
+    .seg button { border:none; background:transparent; padding:6px 10px; border-radius:8px; cursor:pointer; font-weight:600; color:#374151; }
+    .seg button.active { background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:10px 8px; border-bottom:1px solid #eef2f7; text-align:left; }
+    th { font-size:12px; color:#6b7280; font-weight:600; }
+    td { font-size:14px; }
+    .btn { background: linear-gradient(135deg, #ef4444, #dc2626); color:#fff; padding:8px 12px; border:none; border-radius:10px; font-weight:600; cursor:pointer; }
+  </style>
+  <script>
+    let selectedChannel = null;
+    const palette = ["#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"];
+    const chanColors = new Map();
+
+    async function fetchJSON(url){
+      const r = await fetch(url);
+      if(!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+
+    async function loadChannels(){
+      const data = await fetchJSON('/youtube/channels');
+      const list = document.getElementById('channels');
+      list.innerHTML = '';
+      (data.channels||[]).forEach((c, i) => {
+        const el = document.createElement('div');
+        el.className = 'channel';
+        const color = palette[i % palette.length];
+        chanColors.set(c.id, color);
+        el.style.borderLeftColor = color;
+        const t = c.thumbnail_url ? `<img class="thumb" src="${c.thumbnail_url}"/>` : `<div class="thumb" style="background:${color}20;color:${color}">YT</div>`;
+        el.innerHTML = `${t}<div><div style="font-weight:600;">${c.title}</div><div style="color:#6b7280; font-size:12px;">${c.yt_channel_id}</div></div>`;
+        el.onclick = () => { selectChannel(c.id); };
+        list.appendChild(el);
+      });
+      if((data.channels||[]).length){ selectChannel(data.channels[0].id); }
+    }
+
+    async function selectChannel(id){
+      selectedChannel = id;
+      setMode('selected');
+      await loadVideoSummary(id);
+    }
+
+    async function loadVideoSummary(channelId){
+      const data = await fetchJSON(`/youtube/videos/summary?channel_id=${channelId}`);
+      const tbody = document.getElementById('vid-rows');
+      tbody.innerHTML = '';
+      (data.videos||[]).forEach(v => {
+        const tr = document.createElement('tr');
+        const color = chanColors.get(channelId) || '#ef4444';
+        tr.innerHTML = `
+          <td><div style="display:flex; align-items:center; gap:10px;">
+            ${v.thumbnail_url ? `<img src="${v.thumbnail_url}" style="width:64px;height:36px;border-radius:6px;object-fit:cover;">` : '<div class="thumb">YT</div>'}
+            <div>
+              <div style="font-weight:600;">${v.title || ''}</div>
+              <div style="color:#6b7280; font-size:12px;">${v.yt_video_id}</div>
+              <div style="margin-top:2px; font-size:11px; color:${color}; font-weight:700;">Channel</div>
+            </div>
+          </div></td>
+          <td>${(v.views||0).toLocaleString()}</td>
+          <td>${((v.watch_time_min||0)/60).toFixed(1)}</td>
+          <td>${(v.subs_net||0)}</td>
+          <td>${(v.impressions||0).toLocaleString()}</td>
+          <td>${(v.ctr_pct||0).toFixed(2)}%</td>
+          <td>${(v.avg_view_duration_sec||0)}s</td>
+          <td>${(v.avg_pct_viewed||0).toFixed(1)}%</td>
+          <td>$${((v.revenue_minor||0)/100).toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadAllChannelVideos(){
+      const chans = await fetchJSON('/youtube/channels');
+      const tbody = document.getElementById('vid-rows');
+      tbody.innerHTML = '';
+      for(const c of (chans.channels||[])){
+        const color = chanColors.get(c.id) || palette[0];
+        const sum = await fetchJSON(`/youtube/videos/summary?channel_id=${c.id}`);
+        (sum.videos||[]).forEach(v => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><div style="display:flex; align-items:center; gap:10px;">
+              ${v.thumbnail_url ? `<img src="${v.thumbnail_url}" style="width:64px;height:36px;border-radius:6px;object-fit:cover;">` : '<div class="thumb">YT</div>'}
+              <div>
+                <div style="font-weight:600;">${v.title || ''}</div>
+                <div style="color:#6b7280; font-size:12px;">${v.yt_video_id}</div>
+                <div style="margin-top:2px; font-size:11px; color:${color}; font-weight:700;">${c.title}</div>
+              </div>
+            </div></td>
+            <td>${(v.views||0).toLocaleString()}</td>
+            <td>${((v.watch_time_min||0)/60).toFixed(1)}</td>
+            <td>${(v.subs_net||0)}</td>
+            <td>${(v.impressions||0).toLocaleString()}</td>
+            <td>${(v.ctr_pct||0).toFixed(2)}%</td>
+            <td>${(v.avg_view_duration_sec||0)}s</td>
+            <td>${(v.avg_pct_viewed||0).toFixed(1)}%</td>
+            <td>$${((v.revenue_minor||0)/100).toFixed(2)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    function setMode(mode){
+      const bAll = document.getElementById('modeAll');
+      const bSel = document.getElementById('modeSel');
+      if(mode === 'all'){
+        bAll.classList.add('active');
+        bSel.classList.remove('active');
+        loadAllChannelVideos();
+        updateChart({ all: true });
+      } else {
+        bSel.classList.add('active');
+        bAll.classList.remove('active');
+        if(selectedChannel) updateChart({ channelId: selectedChannel });
+      }
+    }
+
+    // Full sync is automatic (8h rule) or via manual refresh across all channels
+
+    async function ensureAuth(){
+      const r = await fetch('/auth/connected');
+      if(!r.ok){ window.location.href = '/ui/login.html'; }
+    }
+
+    async function manualRefresh(){
+      const b = document.getElementById('refreshBtn');
+      b.disabled = true;
+      try{
+        const r = await fetch('/youtube/sync/manual', { method:'POST' });
+        const j = await r.json().catch(()=>({}));
+        if(!r.ok){ alert(j.detail || 'Refresh failed'); }
+        await loadChannels();
+        await updateRefreshInfo();
+        if(selectedChannel) await loadVideoSummary(selectedChannel);
+      } finally {
+        b.disabled = false;
+      }
+    }
+
+    async function updateRefreshInfo(){
+      try{
+        const j = await fetchJSON('/auth/me');
+        const used = j.manual_refresh_count || 0;
+        const remaining = Math.max(0, 3 - used);
+        document.getElementById('refreshInfo').textContent = `Manual refresh left today: ${remaining}`;
+      } catch(e){}
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await ensureAuth();
+      // Auto refresh if last sync > 8h
+      try { await fetch('/youtube/sync/auto', { method:'POST' }); } catch (e) {}
+      await loadChannels();
+      await updateRefreshInfo();
+      if(selectedChannel) updateChart({ channelId: selectedChannel });
+    });
+
+    let chart;
+    async function updateChart({ channelId=null, all=false }){
+      try{
+        let url = all ? '/youtube/channel/timeseries?all=true&days=28' : `/youtube/channel/timeseries?channel_id=${channelId}&days=28`;
+        const j = await fetchJSON(url);
+        const labels = (j.series||[]).map(p => p.date);
+        const views = (j.series||[]).map(p => p.views || 0);
+        const ctx = document.getElementById('tsChart').getContext('2d');
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: { labels, datasets: [{ label: 'Views', data: views, borderColor: '#7c3aed', fill: false, tension: .3 }] },
+          options: { plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}}, y:{grid:{color:'#eef2f7'}}} }
+        });
+      }catch(e){ /* ignore */ }
+    }
+  </script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo"><div class="logo-icon">R</div><div style="font-weight:700;">ReUnifyd</div></div>
+      <div><a href="/ui/link.html" class="btn" style="text-decoration:none;">Link Channels</a></div>
+    </div>
+  </header>
+  <div class="container">
+    <div class="row">
+      <div class="card sidebar">
+        <div id="channels"></div>
+      </div>
+      <div class="card main">
+        <div class="toolbar">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="font-weight:700;">Videos</div>
+            <div class="seg">
+              <button id="modeSel" class="active" onclick="setMode('selected')">Selected channel</button>
+              <button id="modeAll" onclick="setMode('all')">All channels</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button id="refreshBtn" class="btn" onclick="manualRefresh()">Refresh anyway</button>
+            <span id="refreshInfo" style="color:#6b7280; font-size:12px;"></span>
+          </div>
+      </div>
+        <div class="card" style="padding:14px; margin-bottom:12px;">
+          <canvas id="tsChart" height="88"></canvas>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Video</th>
+                <th>Views</th>
+                <th>Watch time (hrs)</th>
+                <th>Subs</th>
+                <th>Impressions</th>
+                <th>CTR</th>
+                <th>Avg view duration</th>
+                <th>Avg % viewed</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody id="vid-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from sqlmodel import text
+from fastapi.staticfiles import StaticFiles
 
 from .db.core import engine, create_db_and_tables
 from .core.settings import settings
@@ -122,3 +123,12 @@ def debug_oauth_config():
         "cookie_secure": secure_cookie,
         "cookie_samesite": getattr(settings, "session_same_site", "lax"),
     }
+
+# --- Serve UI files under /ui (from repo root) ---
+try:
+    here = os.path.dirname(__file__)
+    ui_dir = os.path.abspath(os.path.join(here, "..", "..", ""))
+    if os.path.isdir(ui_dir):
+        app.mount("/ui", StaticFiles(directory=ui_dir, html=True), name="ui")
+except Exception:
+    pass

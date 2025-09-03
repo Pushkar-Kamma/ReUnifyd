@@ -35,6 +35,9 @@ def init_oauth(app, settings) -> None:
     # Save for routes that read from app.state
     app.state.oauth_redirect = redirect_uri
     app.state.app_base_url = app_base_url
+    # Expose oauth client via app.state for helpers
+    app.state.oauth = oauth
+    app.state.oauth_token_url = "https://oauth2.googleapis.com/token"
 
     # (Re)register the provider on the shared module-level `oauth`
     # If uvicorn reloads, `register` will overwrite the prior config safely.
