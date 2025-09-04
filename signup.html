@@ -245,8 +245,8 @@
         body: JSON.stringify({ email, username, password })
       });
       if(r.ok){
-        // Go straight to Google linking after creating the account
-        window.location.href = '/auth/google/init?next=/ui/link.html';
+        // Go to link page after creating the account
+        window.location.href = '/ui/link.html';
         return;
       }
       const data = await r.json().catch(()=>({detail:'Signup failed'}));
