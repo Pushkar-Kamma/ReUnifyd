@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Demo - ReUnifyd</title>
+    <meta name="description" content="See ReUnifyd in action with a personalized demo. Get a walkthrough of our YouTube analytics dashboard tailored to your needs.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #374151;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 16px 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            color: #6b7280;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: #ef4444;
+            background: #f9fafb;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 24px;
+        }
+
+        .hero-description {
+            font-size: 20px;
+            color: #6b7280;
+            margin-bottom: 48px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Demo Form Section */
+        .demo-form {
+            padding: 80px 0;
+        }
+
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 48px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            min-height: 120px;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            margin-top: 16px;
+        }
+
+        /* Benefits Section */
+        .benefits {
+            padding: 80px 0;
+            background: #f9fafb;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .benefit-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(239, 68, 68, 0.1);
+        }
+
+        .benefit-icon {
+            width: 64px;
+            height: 64px;
+            background: #fef2f2;
+            color: #ef4444;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .benefit-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 16px;
+        }
+
+        .benefit-description {
+            color: #6b7280;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 40px 0;
+            background: #111827;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .form-container {
+                padding: 32px 24px;
+                margin: 0 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container flex items-center justify-between">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">R</div>
+                <span class="logo-text">ReUnifyd</span>
+            </a>
+            
+            <nav class="nav-links">
+                <a href="index.html#features" class="nav-link">Features</a>
+                <a href="index.html#help" class="nav-link">Help</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="demo.html" class="nav-link">Request Demo</a>
+                <a href="login.html" class="nav-link">Login</a>
+                <a href="signup.html" class="btn-primary" style="margin-left: 8px;">Sign Up</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">See ReUnifyd in Action</h1>
+            <p class="hero-description">
+                Get a personalized walkthrough of our YouTube analytics dashboard. See how ReUnifyd can transform your multi-channel workflow.
+            </p>
+        </div>
+    </section>
+
+    <!-- Demo Form Section -->
+    <section class="demo-form">
+        <div class="container">
+            <div class="form-container">
+                <h2 style="font-size: 32px; font-weight: bold; color: #111827; margin-bottom: 32px; text-align: center;">Request Your Demo</h2>
+                
+                <form id="demoForm">
+                    <div class="form-group">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" class="form-input" placeholder="Enter your full name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email Address *</label>
+                        <input type="email" class="form-input" placeholder="you@company.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Company/Channel Name</label>
+                        <input type="text" class="form-input" placeholder="Your company or channel name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Number of YouTube Channels *</label>
+                        <select class="form-select" required>
+                            <option value="">Select number of channels</option>
+                            <option value="1-3">1-3 channels</option>
+                            <option value="4-10">4-10 channels</option>
+                            <option value="11-25">11-25 channels</option>
+                            <option value="25+">25+ channels</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Monthly Views</label>
+                        <select class="form-select">
+                            <option value="">Select monthly views</option>
+                            <option value="0-100k">0-100k views</option>
+                            <option value="100k-1M">100k-1M views</option>
+                            <option value="1M-10M">1M-10M views</option>
+                            <option value="10M+">10M+ views</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Preferred Demo Time</label>
+                        <select class="form-select">
+                            <option value="">Select preferred time</option>
+                            <option value="morning">Morning (9 AM - 12 PM)</option>
+                            <option value="afternoon">Afternoon (12 PM - 5 PM)</option>
+                            <option value="evening">Evening (5 PM - 8 PM)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">What would you like to see? *</label>
+                        <textarea class="form-textarea" placeholder="Tell us about your specific needs, questions, or what you'd like to focus on during the demo..." required></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary submit-btn">
+                        <i data-lucide="calendar"></i>
+                        Schedule Demo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits">
+        <div class="container">
+            <div class="text-center">
+                <h2 style="font-size: 36px; font-weight: bold; color: #111827; margin-bottom: 24px;">Why Schedule a Demo?</h2>
+                <p style="font-size: 18px; color: #6b7280; margin-bottom: 48px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    Get personalized insights and see exactly how ReUnifyd fits your workflow
+                </p>
+            </div>
+            
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i data-lucide="users"></i>
+                    </div>
+                    <h3 class="benefit-title">Personalized Experience</h3>
+                    <p class="benefit-description">See ReUnifyd configured specifically for your channel setup and analytics needs.</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i data-lucide="message-circle"></i>
+                    </div>
+                    <h3 class="benefit-title">Direct Q&A</h3>
+                    <p class="benefit-description">Ask questions and get immediate answers from our product experts.</p>
+                </div>
+                
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i data-lucide="zap"></i>
+                    </div>
+                    <h3 class="benefit-title">Quick Setup</h3>
+                    <p class="benefit-description">Learn how to get started in minutes, not hours.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px;">
+                <!-- Left Column -->
+                <div>
+                    <div class="flex items-center" style="margin-bottom: 24px;">
+                        <div class="logo-icon">R</div>
+                        <span class="logo-text" style="color: white; margin-left: 12px;">ReUnifyd</span>
+                    </div>
+                    
+                    <p style="color: #9ca3af; margin-bottom: 24px; line-height: 1.6;">
+                        The unified YouTube analytics platform designed for multi-channel creators. Stop tab-hopping and see all your channel metrics in one beautiful dashboard.
+                    </p>
+                    
+                    <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="twitter" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="youtube" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="instagram" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="linkedin" style="width: 20px; height: 20px;"></i>
+                        </a>
+                    </div>
+                    
+                    <a href="#contact" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i data-lucide="mail" style="width: 16px; height: 16px;"></i>
+                        Contact Us
+                    </a>
+                </div>
+                
+                <!-- Product Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Product</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="index.html#features" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Features</a>
+                        <a href="pricing.html" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Pricing</a>
+                        <a href="demo.html" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Request Demo</a>
+                        <a href="#updates" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Updates</a>
+                    </div>
+                </div>
+                
+                <!-- Support Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Support</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="index.html#help" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Help Center</a>
+                        <a href="#docs" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Documentation</a>
+                        <a href="#api" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">API Reference</a>
+                        <a href="#status" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Status</a>
+                    </div>
+                </div>
+                
+                <!-- Community Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Community</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="#blog" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Blog</a>
+                        <a href="#discussion" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Discussion</a>
+                        <a href="#creators" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">For Creators</a>
+                        <a href="#newsletter" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Newsletter</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Footer Bar -->
+            <div style="border-top: 1px solid #374151; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <p style="color: #9ca3af;">© 2024 ReUnifyd. All rights reserved.</p>
+                
+                <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                    <a href="index.html#privacy" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Privacy Policy</a>
+                    <a href="index.html#terms" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Terms of Service</a>
+                    <a href="#cookies" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Cookies</a>
+                    <a href="#blog" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Blog</a>
+                    <a href="#discussion" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Discussion</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Demo form submission
+        document.getElementById('demoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(this);
+            
+            // Show success message
+            alert('Thank you! We\'ll be in touch within 24 hours to schedule your demo.');
+            
+            // Reset form
+            this.reset();
+        });
+    </script>
+</body>
+</html>

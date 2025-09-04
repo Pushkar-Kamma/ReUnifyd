@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - ReUnifyd</title>
+    <meta name="description" content="Choose the perfect ReUnifyd plan for your YouTube analytics needs. Simple, transparent pricing for creators of all sizes.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #374151;
+            padding: 12px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 16px 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111827;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            color: #6b7280;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: #ef4444;
+            background: #f9fafb;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 24px;
+        }
+
+        .hero-description {
+            font-size: 20px;
+            color: #6b7280;
+            margin-bottom: 48px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Pricing Cards */
+        .pricing {
+            padding: 80px 0;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .pricing-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(239, 68, 68, 0.1);
+        }
+
+        .pricing-card.featured {
+            border-color: #ef4444;
+            transform: scale(1.05);
+        }
+
+        .pricing-card.featured::before {
+            content: "Most Popular";
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .plan-name {
+            font-size: 24px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 16px;
+        }
+
+        .plan-price {
+            font-size: 48px;
+            font-weight: bold;
+            color: #ef4444;
+            margin-bottom: 8px;
+        }
+
+        .plan-period {
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 32px;
+        }
+
+        .plan-features li {
+            padding: 8px 0;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .plan-features li i {
+            color: #10b981;
+        }
+
+        .cta-button {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+        }
+
+        /* FAQ Section */
+        .faq {
+            padding: 80px 0;
+            background: #f9fafb;
+        }
+
+        .faq-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+
+        .faq-question:hover {
+            background: #f9fafb;
+        }
+
+        .faq-answer {
+            padding: 0 24px 24px;
+            color: #6b7280;
+            display: none;
+        }
+
+        .faq-answer.active {
+            display: block;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 40px 0;
+            background: #111827;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .pricing-card.featured {
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container flex items-center justify-between">
+            <a href="simple.html" class="logo">
+                <div class="logo-icon">R</div>
+                <span class="logo-text">ReUnifyd</span>
+            </a>
+            
+            <nav class="nav-links">
+                <a href="simple.html#features" class="nav-link">Features</a>
+                <a href="simple.html#help" class="nav-link">Help</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="demo.html" class="nav-link">Request Demo</a>
+                <a href="login.html" class="nav-link">Login</a>
+                <a href="signup.html" class="btn-primary" style="margin-left: 8px;">Sign Up</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">Simple, Transparent Pricing</h1>
+            <p class="hero-description">
+                Choose the perfect plan for your YouTube analytics needs. No hidden fees, no surprises.
+            </p>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing">
+        <div class="container">
+            <div class="pricing-grid">
+                <!-- Starter Plan -->
+                <div class="pricing-card">
+                    <h3 class="plan-name">Starter</h3>
+                    <div class="plan-price">$9</div>
+                    <div class="plan-period">per month</div>
+                    <ul class="plan-features">
+                        <li><i data-lucide="check"></i> Up to 3 channels</li>
+                        <li><i data-lucide="check"></i> Basic analytics</li>
+                        <li><i data-lucide="check"></i> Daily updates</li>
+                        <li><i data-lucide="check"></i> Email support</li>
+                    </ul>
+                    <a href="signup.html" class="btn-primary cta-button">Get Started</a>
+                </div>
+
+                <!-- Pro Plan -->
+                <div class="pricing-card featured">
+                    <h3 class="plan-name">Pro</h3>
+                    <div class="plan-price">$29</div>
+                    <div class="plan-period">per month</div>
+                    <ul class="plan-features">
+                        <li><i data-lucide="check"></i> Up to 10 channels</li>
+                        <li><i data-lucide="check"></i> Advanced analytics</li>
+                        <li><i data-lucide="check"></i> Real-time updates</li>
+                        <li><i data-lucide="check"></i> Priority support</li>
+                        <li><i data-lucide="check"></i> Custom reports</li>
+                        <li><i data-lucide="check"></i> API access</li>
+                    </ul>
+                    <a href="signup.html" class="btn-primary cta-button">Start Free Trial</a>
+                </div>
+
+                <!-- Enterprise Plan -->
+                <div class="pricing-card">
+                    <h3 class="plan-name">Enterprise</h3>
+                    <div class="plan-price">$99</div>
+                    <div class="plan-period">per month</div>
+                    <ul class="plan-features">
+                        <li><i data-lucide="check"></i> Unlimited channels</li>
+                        <li><i data-lucide="check"></i> Enterprise analytics</li>
+                        <li><i data-lucide="check"></i> Instant updates</li>
+                        <li><i data-lucide="check"></i> 24/7 support</li>
+                        <li><i data-lucide="check"></i> White-label options</li>
+                        <li><i data-lucide="check"></i> Dedicated account manager</li>
+                    </ul>
+                    <a href="demo.html" class="btn-secondary cta-button">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq">
+        <div class="container">
+            <div class="text-center">
+                <h2 style="font-size: 36px; font-weight: bold; color: #111827; margin-bottom: 48px;">Frequently Asked Questions</h2>
+            </div>
+            
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>Can I change plans anytime?</span>
+                        <i data-lucide="chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>Is there a free trial?</span>
+                        <i data-lucide="chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        Pro plan comes with a 14-day free trial. No credit card required to start.
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>What payment methods do you accept?</span>
+                        <i data-lucide="chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        We accept all major credit cards, PayPal, and bank transfers for enterprise plans.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px;">
+                <!-- Left Column -->
+                <div>
+                    <div class="flex items-center" style="margin-bottom: 24px;">
+                        <div class="logo-icon">R</div>
+                        <span class="logo-text" style="color: white; margin-left: 12px;">ReUnifyd</span>
+                    </div>
+                    
+                    <p style="color: #9ca3af; margin-bottom: 24px; line-height: 1.6;">
+                        The unified YouTube analytics platform designed for multi-channel creators. Stop tab-hopping and see all your channel metrics in one beautiful dashboard.
+                    </p>
+                    
+                    <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="twitter" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="youtube" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="instagram" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="linkedin" style="width: 20px; height: 20px;"></i>
+                        </a>
+                    </div>
+                    
+                    <a href="#contact" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i data-lucide="mail" style="width: 16px; height: 16px;"></i>
+                        Contact Us
+                    </a>
+                </div>
+                
+                <!-- Product Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Product</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="simple.html#features" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Features</a>
+                        <a href="pricing.html" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Pricing</a>
+                        <a href="demo.html" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Request Demo</a>
+                        <a href="#updates" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Updates</a>
+                    </div>
+                </div>
+                
+                <!-- Support Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Support</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="simple.html#help" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Help Center</a>
+                        <a href="#docs" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Documentation</a>
+                        <a href="#api" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">API Reference</a>
+                        <a href="#status" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Status</a>
+                    </div>
+                </div>
+                
+                <!-- Community Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Community</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="#blog" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Blog</a>
+                        <a href="#discussion" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Discussion</a>
+                        <a href="#creators" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">For Creators</a>
+                        <a href="#newsletter" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Newsletter</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottom Footer Bar -->
+            <div style="border-top: 1px solid #374151; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <p style="color: #9ca3af;">© 2024 ReUnifyd. All rights reserved.</p>
+                
+                <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                    <a href="simple.html#privacy" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Privacy Policy</a>
+                    <a href="simple.html#terms" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Terms of Service</a>
+                    <a href="#cookies" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Cookies</a>
+                    <a href="#blog" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Blog</a>
+                    <a href="#discussion" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Discussion</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // FAQ toggle functionality
+        function toggleFaq(element) {
+            const answer = element.nextElementSibling;
+            const icon = element.querySelector('[data-lucide="chevron-down"]');
+            
+            if (answer.classList.contains('active')) {
+                answer.classList.remove('active');
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                // Close all other FAQ items
+                document.querySelectorAll('.faq-answer.active').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelectorAll('.faq-question [data-lucide="chevron-down"]').forEach(icon => {
+                    icon.style.transform = 'rotate(0deg)';
+                });
+                
+                // Open clicked item
+                answer.classList.add('active');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+    </script>
+</body>
+</html>

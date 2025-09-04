@@ -4,61 +4,168 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ReUnifyd • Log In</title>
+  <meta name="description" content="Sign in to your ReUnifyd account to access your YouTube analytics dashboard.">
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Optional icons (safe to remove) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
   <style>
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); margin:0; }
-    .container { max-width: 520px; margin: 80px auto; padding: 0 20px; }
-    .card { background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:28px; box-shadow:0 10px 30px rgba(0,0,0,.06); }
-    h1 { margin: 0 0 8px; font-size: 28px; color:#111827; }
-    p { margin: 0 0 16px; color:#6b7280; }
-    .field { display:flex; flex-direction:column; gap:8px; margin:12px 0; }
-    label { font-weight:600; color:#374151; }
-    input { height:48px; border-radius:12px; border:1px solid #e5e7eb; padding:0 14px; font-size:16px; }
-    .actions { display:flex; gap:12px; align-items:center; margin-top:12px; }
-    .btn { background: linear-gradient(135deg, #ef4444, #dc2626); color:#fff; padding:12px 18px; border:none; border-radius:12px; font-weight:600; cursor:pointer; }
-    .link { text-decoration:none; color:#ef4444; font-weight:600; }
-    .header { position:sticky; top:0; background:rgba(255,255,255,.8); border-bottom:1px solid #e5e7eb; backdrop-filter:blur(10px); padding:14px 0; }
-    .header-inner { max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; }
-    .logo { display:flex; align-items:center; gap:12px; }
-    .logo-icon { width:40px; height:40px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius:12px; display:grid; place-items:center; color:#fff; font-weight:700; }
+    *{box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#ffffff 0%,#f8fafc 100%);margin:0;color:#374151;min-height:100vh;display:flex;flex-direction:column;line-height:1.6}
+
+    /* Header – keep same class names */
+    .header{position:sticky;top:0;background:rgba(255,255,255,.95);border-bottom:1px solid #e5e7eb;backdrop-filter:blur(10px);padding:16px 0;z-index:1000}
+    .header-inner{max-width:1100px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+    .logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+    .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(239,68,68,.3)}
+    .link{text-decoration:none;color:#ef4444;font-weight:600;padding:8px 14px;border-radius:8px;transition:all .2s}
+    .link:hover{background:#f9fafb;color:#dc2626}
+
+    /* Container – upgrade for 2-col layout */
+    .container{max-width:1200px;margin:80px auto;padding:0 20px;width:100%;flex:1}
+
+    /* Two-column grid around your card */
+    .login-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+
+    /* Card – keep class but improve visuals */
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:24px;padding:48px;box-shadow:0 20px 60px rgba(0,0,0,.08);max-width:520px;margin:0 auto}
+
+    h1{margin:0 0 8px;font-size:32px;color:#111827;font-weight:800}
+    p{margin:0 0 16px;color:#6b7280}
+
+    .field{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+    label{font-weight:600;color:#111827}
+    input{height:52px;border-radius:12px;border:2px solid #e5e7eb;padding:0 14px;font-size:16px;transition:all .2s;width:100%}
+    input:focus{outline:none;border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12)}
+
+    .actions{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+    .btn{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;padding:14px 22px;border:none;border-radius:12px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+    .btn:hover{background:linear-gradient(135deg,#dc2626,#b91c1c);transform:translateY(-1px);box-shadow:0 10px 30px rgba(239,68,68,.25)}
+
+    /* Hero side */
+    .hero{text-align:center;max-width:520px;margin:0 auto}
+    .hero h2{font-size:44px;font-weight:800;color:#111827;margin:0 0 16px}
+    .hero p{font-size:18px;color:#6b7280;margin:0 auto 24px;max-width:520px}
+    .hero-list{display:flex;flex-direction:column;gap:12px;max-width:420px;margin:0 auto;color:#6b7280}
+    .hero-item{display:flex;align-items:center;gap:10px;justify-content:center}
+
+    /* Footer – simple dark strip */
+    .footer{padding:32px 0;background:#111827;color:#9ca3af;margin-top:auto}
+    .footer-inner{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .footer .brand{display:flex;align-items:center;gap:12px;color:#fff;font-weight:700}
+
+    @media (max-width:900px){
+      .container{margin:60px auto}
+      .login-grid{grid-template-columns:1fr;gap:40px}
+      .hero h2{font-size:36px}
+    }
   </style>
+
   <script>
+    // === Keep your exact login() behavior and links ===
     async function login(ev){
       ev.preventDefault();
       const username_or_email = document.getElementById('ident').value.trim();
       const password = document.getElementById('password').value;
       const r = await fetch('/auth/login', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ username_or_email, password })
       });
       if(r.ok){ window.location.href = '/ui/dashboard.html'; return; }
       const data = await r.json().catch(()=>({detail:'Login failed'}));
       alert(data.detail || 'Login failed');
     }
+
+    // Optional: render icons if script is present
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide && lucide.createIcons) lucide.createIcons();
+    });
   </script>
 </head>
 <body>
+  <!-- Header (link preserved to /ui/signup.html) -->
   <header class="header">
     <div class="header-inner">
-      <div class="logo"><div class="logo-icon">R</div><div style="font-weight:700;">ReUnifyd</div></div>
+      <a href="/" class="logo">
+        <div class="logo-icon">R</div>
+        <div style="font-weight:700;color:#111827;">ReUnifyd</div>
+      </a>
       <a href="/ui/signup.html" class="link">Sign Up</a>
     </div>
   </header>
+
+  <!-- Main -->
   <div class="container">
-    <div class="card">
-      <h1>Welcome back</h1>
-      <p>Log in to continue linking your channels.</p>
-      <form onsubmit="login(event)">
-        <div class="field"><label>Username or Email</label><input id="ident" required /></div>
-        <div class="field"><label>Password</label><input id="password" type="password" required /></div>
-        <div class="actions">
-          <button class="btn" type="submit">Log In</button>
-          <a class="link" href="/ui/signup.html">Create an account</a>
+    <div class="login-grid">
+      <!-- Left: your original form with same IDs/classes and onsubmit -->
+      <div class="card">
+        <h1>Welcome back</h1>
+        <p>Log in to continue linking your channels.</p>
+        <form onsubmit="login(event)">
+          <div class="field">
+            <label for="ident">Username or Email</label>
+            <input id="ident" required placeholder="you@company.com or your username" />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" type="password" required placeholder="Enter your password" />
+          </div>
+          <div class="actions">
+            <button class="btn" type="submit">
+              <i data-lucide="log-in" style="width:18px;height:18px;"></i>
+              Log In
+            </button>
+            <a class="link" href="/ui/signup.html">Create an account</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right: hero pane (presentational only) -->
+      <aside class="hero" aria-hidden="true">
+        <h2>Access Your Analytics</h2>
+        <p>Get back to monitoring your YouTube channels with our unified dashboard. Track performance, analyze trends, and grow your audience.</p>
+
+        <div class="hero-list">
+          <div class="hero-item">
+            <i data-lucide="check-circle" style="width:20px;height:20px;"></i>
+            <span>Real-time channel analytics</span>
+          </div>
+          <div class="hero-item">
+            <i data-lucide="check-circle" style="width:20px;height:20px;"></i>
+            <span>Multi-channel insights</span>
+          </div>
+          <div class="hero-item">
+            <i data-lucide="check-circle" style="width:20px;height:20px;"></i>
+            <span>Performance tracking</span>
+          </div>
+          <div class="hero-item">
+            <i data-lucide="check-circle" style="width:20px;height:20px;"></i>
+            <span>Custom reports</span>
+          </div>
         </div>
-      </form>
+      </aside>
     </div>
   </div>
+
+  <!-- Simple footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="brand">
+        <div class="logo-icon">R</div>
+        <span>ReUnifyd</span>
+      </div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <span>© 2024 ReUnifyd</span>
+        <span>•</span>
+        <a class="link" href="/ui/signup.html" style="padding:0;font-weight:500;">Sign Up</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

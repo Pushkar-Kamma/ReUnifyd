@@ -329,6 +329,7 @@
             scrollbar-width: none;
             -ms-overflow-style: none;
             padding-bottom: 24px;
+            position: relative;
         }
 
         .scrolling-gallery::-webkit-scrollbar {
@@ -339,6 +340,16 @@
             display: flex;
             gap: 32px;
             width: max-content;
+            animation: scroll-left 30s linear infinite;
+        }
+
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .scrolling-gallery:hover .gallery-items {
+            animation-play-state: paused;
         }
 
         .value-card {
@@ -445,25 +456,24 @@
 
         /* Waitlist Section */
         .waitlist {
-            padding: 80px 0;
+            padding: 60px 0;
             background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
         }
 
         .waitlist-card {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 24px;
-            padding: 48px;
-            max-width: 600px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 800px;
             margin: 0 auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
         .form {
             display: flex;
             gap: 16px;
-            max-width: 400px;
-            margin: 0 auto;
+            align-items: center;
             flex-wrap: wrap;
         }
 
@@ -473,7 +483,7 @@
             border: 1px solid #e5e7eb;
             border-radius: 12px;
             font-size: 16px;
-            min-width: 250px;
+            min-width: 280px;
         }
 
         .form input:focus {
@@ -566,9 +576,9 @@
             <nav class="nav-links">
                 <a href="#features" class="nav-link">Features</a>
                 <a href="#help" class="nav-link">Help</a>
-                <a href="#pricing" class="nav-link">Pricing</a>
-                <a href="#demo" class="nav-link">Request Demo</a>
-                <a href="lo:gin.html" class="nav-link">Login</a>
+                <a href="pricing.html" class="nav-link">Pricing</a>
+                <a href="demo.html" class="nav-link">Request Demo</a>
+                <a href="login.html" class="nav-link">Login</a>
                 <a href="signup.html" class="btn-primary" style="margin-left: 8px;">Sign Up</a>
             </nav>
         </div>
@@ -578,13 +588,9 @@
     <section class="hero">
         <div class="container text-center">
             <div class="animate-on-scroll">
-                <div class="hero-badge">
-                    <span style="font-size: 18px;">🚀</span>
-                    <span>One dashboard • All your channels</span>
-                </div>
                 
                 <h1 class="hero-title">
-                    Unified YouTube analytics for 
+                    ReUnifyd YouTube analytics for 
                     <span class="gradient-text">multi-channel creators</span>
                 </h1>
                 
@@ -769,19 +775,27 @@
     <!-- Waitlist Section -->
     <section id="waitlist" class="waitlist">
         <div class="container">
-            <div class="waitlist-card text-center animate-on-scroll">
-                <h2 class="section-title">Join the Waitlist</h2>
-                <p class="section-description">
-                    Get early access, exclusive updates, and help shape the future of ReUnifyd. No spam, unsubscribe anytime.
-                </p>
-                
-                <form class="form" id="waitlistForm">
-                    <input type="email" placeholder="Enter your email" required id="emailInput">
-                    <button type="submit" class="btn-primary">
-                        <span>Join Waitlist</span>
-                        <i data-lucide="arrow-right"></i>
-                    </button>
-                </form>
+            <div class="waitlist-card animate-on-scroll">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px;">
+                        <h2 style="font-size: 24px; font-weight: 600; color: #111827; margin-bottom: 12px;">Join the waitlist</h2>
+                        <p style="color: #6b7280; font-size: 16px; line-height: 1.5; margin: 0;">
+                            Get early access, updates, and a chance to influence the roadmap. No spam. Unsubscribe anytime.
+                        </p>
+                    </div>
+                    
+                    <div style="flex: 0 0 auto;">
+                        <form class="form" id="waitlistForm" style="margin: 0;">
+                            <input type="email" placeholder="you@channelname.com" required id="emailInput">
+                            <button type="submit" class="btn-primary">
+                                <span>Request Invite</span>
+                            </button>
+                        </form>
+                        <p style="color: #6b7280; font-size: 14px; margin-top: 8px;">
+                            By joining, you agree to our <a href="#privacy" style="color: #ef4444; text-decoration: underline;">privacy policy</a>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -883,18 +897,85 @@
 
     <!-- Footer -->
     <footer class="footer">
-        <div class="container text-center">
-            <div class="flex items-center justify-center" style="margin-bottom: 24px;">
-                <div class="logo-icon">R</div>
-                <span class="logo-text" style="color: white; margin-left: 12px;">ReUnifyd</span>
+        <div class="container">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px;">
+                <!-- Left Column -->
+                <div>
+                    <div class="flex items-center" style="margin-bottom: 24px;">
+                        <div class="logo-icon">R</div>
+                        <span class="logo-text" style="color: white; margin-left: 12px;">ReUnifyd</span>
+                    </div>
+                    
+                    <p style="color: #9ca3af; margin-bottom: 24px; line-height: 1.6;">
+                        The unified YouTube analytics platform designed for multi-channel creators. Stop tab-hopping and see all your channel metrics in one beautiful dashboard.
+                    </p>
+                    
+                    <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="twitter" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="youtube" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="instagram" style="width: 20px; height: 20px;"></i>
+                        </a>
+                        <a href="#" style="color: #9ca3af; text-decoration: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #374151; border-radius: 8px; transition: all 0.3s ease;">
+                            <i data-lucide="linkedin" style="width: 20px; height: 20px;"></i>
+                        </a>
+                    </div>
+                    
+                    <a href="#contact" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i data-lucide="mail" style="width: 16px; height: 16px;"></i>
+                        Contact Us
+                    </a>
+                </div>
+                
+                <!-- Product Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Product</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="#features" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Features</a>
+                        <a href="#pricing" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Pricing</a>
+                        <a href="#demo" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Request Demo</a>
+                        <a href="#updates" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Updates</a>
+                    </div>
+                </div>
+                
+                <!-- Support Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Support</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="#help" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Help Center</a>
+                        <a href="#docs" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Documentation</a>
+                        <a href="#api" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">API Reference</a>
+                        <a href="#status" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Status</a>
+                    </div>
+                </div>
+                
+                <!-- Community Column -->
+                <div>
+                    <h3 style="color: white; font-weight: 600; margin-bottom: 20px; font-size: 16px;">Community</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <a href="#blog" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Blog</a>
+                        <a href="#discussion" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Discussion</a>
+                        <a href="#creators" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">For Creators</a>
+                        <a href="#newsletter" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Newsletter</a>
+                    </div>
+                </div>
             </div>
             
-            <p style="color: #9ca3af;">© 2024 ReUnifyd. All rights reserved.</p>
-            
-            <div style="margin-top: 16px; display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
-                <a href="#privacy" style="color: #9ca3af; text-decoration: none;">Privacy Policy</a>
-                <a href="#terms" style="color: #9ca3af; text-decoration: none;">Terms of Service</a>
-                <a href="#contact" style="color: #9ca3af; text-decoration: none;">Contact</a>
+            <!-- Bottom Footer Bar -->
+            <div style="border-top: 1px solid #374151; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <p style="color: #9ca3af;">© 2024 ReUnifyd. All rights reserved.</p>
+                
+                <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                    <a href="#privacy" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Privacy Policy</a>
+                    <a href="#terms" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Terms of Service</a>
+                    <a href="#cookies" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Cookies</a>
+                    <a href="#blog" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Blog</a>
+                    <a href="#discussion" style="color: #9ca3af; text-decoration: none; transition: color 0.3s ease;">Discussion</a>
+                </div>
             </div>
         </div>
     </footer>
@@ -1011,4 +1092,4 @@
         });
     </script>
 </body>
-</html>
+</html> 
