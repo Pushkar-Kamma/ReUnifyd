@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose your Plan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #ffffff;
+            color: #2d3748;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .plans-container {
+            display: flex;
+            gap: 32px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .plan-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 40px 32px;
+            flex: 1;
+            position: relative;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
+        }
+
+        .plan-card:hover {
+            border-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+        }
+
+        .plan-card.featured {
+            border-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+        }
+
+        .plan-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 20px;
+        }
+
+        .plan-price {
+            margin-bottom: 24px;
+        }
+
+        .price-amount {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #dc2626;
+            line-height: 1;
+        }
+
+        .price-period {
+            font-size: 0.875rem;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 24px;
+            flex-grow: 1;
+        }
+
+        .plan-features li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            color: #4a5568;
+        }
+
+        .checkmark {
+            width: 16px;
+            height: 16px;
+            background: #dc2626;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .checkmark::after {
+            content: "✓";
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .plan-button {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .plan-button.primary {
+            background: #dc2626;
+            color: white;
+        }
+
+        .plan-button.primary:hover {
+            background: #b91c1c;
+        }
+
+        .plan-button.secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .plan-button.secondary:hover {
+            background: #edf2f7;
+        }
+
+        @media (max-width: 768px) {
+            .plans-container {
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .plan-card {
+                padding: 24px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="plans-container">
+        <!-- Basic Plan -->
+        <div class="plan-card">
+            <h3 class="plan-title">Basic</h3>
+            <div class="plan-price">
+                <div class="price-amount">Free</div>
+                <div class="price-period">per member / month</div>
+            </div>
+            
+            <ul class="plan-features">
+                <li>
+                    <div class="checkmark"></div>
+                    <span>3 channels max</span>
+                </li>
+                <li>
+                    <div class="checkmark"></div>
+                    <span>Limited analytics</span>
+                </li>
+                <li>
+                    <div class="checkmark"></div>
+                    <span>1 refresh per day</span>
+                </li>
+            </ul>
+
+            <button class="plan-button secondary">Continue</button>
+        </div>
+
+        <!-- Creator Plan -->
+        <div class="plan-card featured">
+            <h3 class="plan-title">Creator</h3>
+            <div class="plan-price">
+                <div class="price-amount">$7</div>
+                <div class="price-period">base + $2 per channel</div>
+            </div>
+            
+            <ul class="plan-features">
+                <li>
+                    <div class="checkmark"></div>
+                    <span>Full analytics</span>
+                </li>
+                <li>
+                    <div class="checkmark"></div>
+                    <span>10 refreshes per day</span>
+                </li>
+                <li>
+                    <div class="checkmark"></div>
+                    <span>Basic AI analysis</span>
+                </li>
+            </ul>
+
+            <button class="plan-button primary">Try for 14 days</button>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="plan-card">
+            <h3 class="plan-title">Pro</h3>
+            <div class="plan-price">
+                <div class="price-amount">$10</div>
+                <div class="price-period">base + $2 per channel</div>
+            </div>
+            
+            <ul class="plan-features">
+                <li>
+                    <div class="checkmark"></div>
+                    <span>Advanced AI analytics</span>
+                </li>
+                <li>
+                    <div class="checkmark"></div>
+                    <span>Video ideas generation</span>
+                </li>
+                <li>
+                    <div class="checkmark"></div>
+                    <span>25 refreshes per day</span>
+                </li>
+            </ul>
+
+            <button class="plan-button primary">Try for 14 days</button>
+        </div>
+    </div>
+</body>
+</html>
