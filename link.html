@@ -13,33 +13,81 @@
     .header-inner { max-width:1100px; margin:0 auto; padding:0 20px; display:flex; align-items:center; justify-content:space-between; }
     .logo { display:flex; align-items:center; gap:12px; }
     .logo-icon { width:40px; height:40px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius:12px; display:grid; place-items:center; color:#fff; font-weight:700; }
+
     .container { max-width: 1000px; margin: 28px auto; padding: 0 20px; }
     .row { display:flex; gap:20px; align-items:stretch; flex-wrap:wrap; }
+
     .card { background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.06); }
-    .wide { flex: 1 1 580px; }
-    .narrow { flex: 1 1 320px; }
+    .wide { flex: 1 1 580px; }   /* RIGHT panel */
+    .narrow { flex: 1 1 320px; } /* LEFT panel  */
+
     h1 { margin: 0 0 8px; font-size: 28px; color:#111827; }
+    h2 { margin: 0 0 8px; font-size: 18px; color:#111827; }
     p { margin: 0 0 16px; color:#6b7280; }
+
     .field { display:flex; gap:10px; align-items:center; }
-    input[type=number] { height:44px; width:120px; border-radius:10px; border:1px solid #e5e7eb; padding:0 10px; }
+    select, input[type=number] { height:44px; border-radius:10px; border:1px solid #e5e7eb; padding:0 10px; background:#fff; }
     .btn { background: linear-gradient(135deg, #ef4444, #dc2626); color:#fff; padding:10px 14px; border:none; border-radius:10px; font-weight:600; cursor:pointer; }
+    .btn-lite { background:#f3f4f6; color:#111827; padding:8px 12px; border:none; border-radius:10px; font-weight:600; cursor:pointer; }
+
     .pill { display:inline-block; padding:6px 10px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:999px; font-weight:600; }
+    .muted { color:#6b7280; }
+
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-top: 12px; }
     .slot { border:1px dashed #fecaca; border-radius:12px; padding:16px; background:linear-gradient(135deg,#fff,#fef2f2); display:flex; flex-direction:column; gap:10px; }
+
     .list { display:grid; gap:10px; }
     .item { display:flex; align-items:center; gap:10px; padding:10px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; }
     .thumb { width:40px; height:40px; border-radius:8px; background:#f3f4f6; display:grid; place-items:center; font-weight:700; color:#ef4444; }
+
+    .est-box { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:14px; }
+    .est-row { display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+    .est-price { font-size:28px; font-weight:800; color:#dc2626; }
+    .mini { font-size:12px; color:#6b7280; }
+
+    .brands { display:grid; gap:10px; margin-top:16px; }
+    .brandpill { display:inline-block; padding:8px 10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:999px; font-weight:600; font-size:12px; }
+
     .topbar { display:flex; gap:8px; align-items:center; }
+    .two-col { display:grid; gap:14px; }
   </style>
+
   <script>
     let count = 0;
+
     function setCount(){
       const n = parseInt(document.getElementById('count').value || '0', 10);
       count = Math.max(0, Math.min(n, 20));
-      fetch('/auth/quota', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ count }) })
-        .then(r => r.json())
-        .then(() => { loadChannels().then(renderSlots); })
-        .catch(() => renderSlots());
+      updateEstimate();
+
+      fetch('/auth/quota', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ count })
+      })
+      .then(r => r.json())
+      .then(() => { loadChannels().then(renderSlots); })
+      .catch(() => renderSlots());
+    }
+
+    function updateEstimate(){
+      const plan = (document.getElementById('plan')?.value || 'basic');
+      let price = 0;
+      if (plan === 'creator') price = 7 + 2 * count;
+      if (plan === 'pro')     price = 10 + 2 * count;
+
+      const label = document.getElementById('est-label');
+      const priceEl = document.getElementById('est-price');
+      const note = document.getElementById('est-note');
+
+      if (priceEl) priceEl.textContent = plan === 'basic'
+        ? (count <= 3 ? '$0' : 'Upgrade needed')
+        : `$${price.toFixed(2)}/mo`;
+
+      if (label) label.textContent = plan === 'basic' ? 'Estimated after trial' : 'Estimated monthly';
+      if (note)  note.textContent  = plan === 'basic'
+        ? 'Basic is free for up to 3 total channels across platforms.'
+        : 'Includes all connected channels across YouTube, Instagram, TikTok.';
     }
 
     function renderSlots(){
@@ -65,7 +113,6 @@
     }
 
     function connectGoogle(idx){
-      // After successful OAuth, backend redirects back to /link.html
       window.location.href = `/auth/google/init?next=/ui/link.html`;
     }
 
@@ -84,14 +131,18 @@
         const row = document.createElement('div');
         row.className = 'item';
         const t = c.thumbnail_url ? `<img class="thumb" src="${c.thumbnail_url}"/>` : `<div class="thumb">YT</div>`;
-        row.innerHTML = `${t}<div><div style="font-weight:600; color:#111827;">${c.title}</div><div style="color:#6b7280; font-size:12px;">${c.yt_channel_id}</div></div>`;
+        row.innerHTML = `${t}<div><div style="font-weight:600; color:#111827;">${c.title}</div><div class="mini">${c.yt_channel_id}</div></div>`;
         list.appendChild(row);
       });
-      // set remaining for slot rendering and reflect quota in input
       const el = document.getElementById('slots');
       if(typeof data.remaining === 'number') { el.setAttribute('data-remaining', String(data.remaining)); }
       else { el.removeAttribute('data-remaining'); }
-      if(typeof data.quota === 'number'){ document.getElementById('count').value = data.quota; count = data.quota; }
+      if(typeof data.quota === 'number'){
+        // reflect quota in dropdown
+        document.getElementById('count').value = data.quota;
+        count = data.quota;
+        updateEstimate();
+      }
     }
 
     async function logout(){
@@ -103,9 +154,18 @@
       await ensureAuth();
       await loadChannels();
       renderSlots();
+      updateEstimate();
+
+      // plan changes update estimate
+      const planSel = document.getElementById('plan');
+      if (planSel){ planSel.addEventListener('change', updateEstimate); }
+
+      // dropdown change -> apply immediately
+      const countSel = document.getElementById('count');
+      if (countSel){ countSel.addEventListener('change', setCount); }
+
       const url = new URL(window.location.href);
       if(url.searchParams.get('linked')){
-        // a simple feedback; could be replaced by a toast
         alert('Channel linked successfully.');
         url.searchParams.delete('linked');
         history.replaceState({}, '', url.pathname);
@@ -125,25 +185,75 @@
       </div>
     </div>
   </header>
+
   <div class="container">
     <div class="row">
-      <div class="card wide">
-        <h1>Link your YouTube channels</h1>
-        <p>Connect each Google account that owns a channel you want in your dashboard.</p>
-        <div class="field">
-          <label for="count" style="font-weight:600;">How many channels do you have?</label>
-          <input id="count" type="number" min="0" max="20" value="0" />
-          <button class="btn" onclick="setCount()">Set</button>
-        </div>
-        <div id="slots" class="grid"></div>
-      </div>
+
+      <!-- LEFT: Estimator (narrow) -->
       <div class="card narrow">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <h2 style="margin:0; font-size:18px;">Linked Channels</h2>
-          <button class="btn" onclick="loadChannels()" style="padding:8px 12px;">Refresh</button>
+        <h1>How many channels?</h1>
+        <p class="muted">Choose how many you plan to connect now. You can add more later.</p>
+
+        <div class="two-col">
+          <div class="est-box">
+            <div class="field" style="justify-content:space-between;">
+              <label for="plan" style="font-weight:700;">Plan</label>
+              <select id="plan" aria-label="Plan">
+                <option value="basic">Basic (Free)</option>
+                <option value="creator">Creator ($7 base + $2/channel)</option>
+                <option value="pro">Pro ($10 base + $2/channel)</option>
+              </select>
+            </div>
+
+            <!-- DROPDOWN for channel count: keeps id="count" used by your JS -->
+            <div style="margin-top:14px;">
+              <label for="count" style="font-weight:700; display:block; margin-bottom:6px;">Channels to add</label>
+              <select id="count">
+                <!-- 0..20 -->
+                <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option>
+                <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option>
+                <option>10</option><option>11</option><option>12</option><option>13</option><option>14</option>
+                <option>15</option><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option>
+              </select>
+            </div>
+
+            <!-- Estimated price -->
+            <div class="est-row" style="margin-top:16px;">
+              <div id="est-label" class="mini">Estimated monthly</div>
+              <div id="est-price" class="est-price">$0</div>
+            </div>
+            <div id="est-note" class="mini" style="margin-top:6px;">Includes all connected channels across platforms.</div>
+          </div>
+
+          <!-- Social proof -->
+          <div class="est-box">
+            <div class="pill">Creators who love ReUnifyd</div>
+            <div class="brands">
+              <span class="brandpill">@FilmCraft</span>
+              <span class="brandpill">@DailyTech</span>
+              <span class="brandpill">@FitWithMaya</span>
+              <span class="brandpill">@ShortsLab</span>
+              <span class="brandpill">@EduVerse</span>
+            </div>
+            <p class="mini" style="margin-top:10px;">“One dashboard for all our channels. The AI tips are 🔥.”</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Linking (wide) -->
+      <div class="card wide">
+        <h1>Link your channels</h1>
+        <p>Use the button in each slot to connect the Google account that owns the channel.</p>
+
+        <div id="slots" class="grid"></div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:18px;">
+          <h2 style="margin:0;">Linked Channels</h2>
+          <button class="btn-lite" onclick="loadChannels()">Refresh</button>
         </div>
         <div id="chan-list" class="list" style="margin-top:10px;"></div>
       </div>
+
     </div>
   </div>
 </body>
