@@ -2,7 +2,7 @@
 import os
 from sqlmodel import SQLModel, create_engine, Session
 from ..core.settings import settings
-
+from sqlalchemy import event
 
 def _normalize_sqlite_url(url: str) -> str:
     """Ensure relative SQLite URLs resolve consistently to the backend directory.
@@ -41,6 +41,19 @@ connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite")
 
 # Turn echo to True if you want to see SQL in logs
 engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
+# Turn on SQLite pragmas for every new DB connection
+if engine.url.get_backend_name() == "sqlite":
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragmas(dbapi_conn, _):
+        cur = dbapi_conn.cursor()
+        # REQUIRED: actually enforce your FOREIGN KEY constraints
+        cur.execute("PRAGMA foreign_keys=ON;")
+        # Optional but recommended: better concurrency / fewer "database is locked"
+        # Only set WAL if this is a file-based DB (not :memory:)
+        if engine.url.database not in (None, "", ":memory:"):
+            cur.execute("PRAGMA journal_mode=WAL;")
+            cur.execute("PRAGMA synchronous=NORMAL;")
+        cur.close()
 
 def get_session():
     """FastAPI dependency."""
