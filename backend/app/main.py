@@ -5,7 +5,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from sqlmodel import text
 from fastapi.staticfiles import StaticFiles
 
-from .db.core import engine, create_db_and_tables
+from .db.core import engine
 from .core.settings import settings
 from .api.test_db import router as test_db_router
 from .api.youtube import router as youtube_router
@@ -76,7 +76,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def _startup() -> None:
     # 1) DB schema
-    create_db_and_tables()
+    #create_db_and_tables()
 
     # 2) Make these available to routes (auth.py uses them)
     app.state.oauth_redirect = getattr(

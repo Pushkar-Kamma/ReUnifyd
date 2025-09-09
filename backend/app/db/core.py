@@ -42,12 +42,6 @@ connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite")
 # Turn echo to True if you want to see SQL in logs
 engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
 
-
-def create_db_and_tables() -> None:
-    """Create tables if they do not exist."""
-    SQLModel.metadata.create_all(engine)
-
-
 def get_session():
     """FastAPI dependency."""
     with Session(engine) as session:

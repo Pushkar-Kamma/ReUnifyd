@@ -10,184 +10,109 @@
 
   <style>
     :root{
-      /* Home-style tokens */
-      --bg: #ffffff;
-      --bg-soft: #f8fafc;
-      --card: #ffffff;
-      --line: #e5e7eb;
-      --text: #111827;
-      --muted:#6b7280;
-      --brand:#ef4444;
-      --brand-d:#dc2626;
-      --radius:16px;
-      --shadow: 0 10px 30px rgba(0,0,0,.06);
-
-      /* Type scale (golden-ish) */
-      --fs-0: 16px;
-      --fs-1: 26px;   /* ~phi * 16 */
-      --fs-2: 42px;   /* ~phi * 26 */
-      --sp-0: 8px;
-      --sp-1: 13px;   /* ~phi * 8 */
-      --sp-2: 21px;   /* ~phi * 13 */
-      --sp-3: 34px;   /* ~phi * 21 */
+      /* home-style tokens */
+      --bg:#ffffff; --bg-soft:#f8fafc; --card:#ffffff; --line:#e5e7eb;
+      --text:#111827; --muted:#6b7280; --brand:#ef4444; --brand-d:#dc2626;
+      --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.06);
+      /* golden-ish */
+      --fs-0:16px; --fs-1:26px; --fs-2:42px;
+      --sp-0:8px; --sp-1:13px; --sp-2:21px; --sp-3:34px;
     }
     *{box-sizing:border-box}
-    body{margin:0; font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--text); background: var(--bg);}
-    .wrap{max-width:1100px; margin: var(--sp-3) auto; padding: 0 20px; display:grid; grid-template-columns: 360px 1fr; gap:20px;}
-    @media (max-width: 960px){ .wrap{grid-template-columns:1fr;} }
-
-    .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--sp-2);}
-    h1{margin:0 0 var(--sp-1); font-size:var(--fs-2); line-height:1.1; font-weight:800; letter-spacing:-0.01em;}
-    h2{margin:0 0 var(--sp-1); font-size:var(--fs-1); line-height:1.2; font-weight:800;}
-    p{margin:0 0 var(--sp-1); color:var(--muted); font-size:var(--fs-0);}
-
-    /* Pretty select (home-like, red accents) */
-    .select{position:relative;}
-    .select select{
-      appearance:none;
-      width:100%; height:48px; border-radius:12px;
-      padding:0 44px 0 14px; font-size:var(--fs-0);
-      border:1px solid var(--line); background:#fff; color:var(--text);
-      transition:border-color .2s, box-shadow .2s;
-    }
-    .select:after{
-      content:"";
-      position:absolute; right:14px; top:50%; transform:translateY(-50%);
-      width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:7px solid var(--muted);
-      pointer-events:none;
-    }
-    .select select:focus{
-      border-color: var(--brand);
-      box-shadow: 0 0 0 6px rgba(239,68,68,.12);
-      outline:none;
-    }
-
-    .est{margin-top:var(--sp-2); background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:var(--sp-1);}
-    .est-row{display:flex; align-items:center; justify-content:space-between;}
-    .price{font-size:28px; font-weight:800; color:var(--brand);}
-    .note{font-size:12px; color:var(--muted); margin-top:6px;}
-
+    body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--text);background:linear-gradient(135deg,#fff 0%,#f8fafc 100%)}
+    .wrap{max-width:1100px;margin:var(--sp-3) auto;padding:0 20px;display:grid;grid-template-columns:360px 1fr;gap:20px}
+    @media(max-width:960px){.wrap{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--sp-2)}
+    h1{margin:0 0 var(--sp-1);font-size:var(--fs-2);line-height:1.1;font-weight:800;letter-spacing:-.01em}
+    p{margin:0 0 var(--sp-1);color:var(--muted);font-size:var(--fs-0)}
     .btn{
-      appearance:none; border:none; cursor:pointer; border-radius:12px;
-      padding:10px 14px; font-weight:700; color:#fff;
-      background: linear-gradient(135deg, var(--brand), var(--brand-d));
-      box-shadow: 0 8px 18px rgba(239,68,68,.25);
-      transition: transform .06s ease, filter .2s ease, box-shadow .2s ease;
+      appearance:none;border:none;cursor:pointer;border-radius:12px;padding:12px 16px;font-weight:700;color:#fff;
+      background:linear-gradient(135deg,var(--brand),var(--brand-d));box-shadow:0 8px 18px rgba(239,68,68,.25);
+      transition:transform .06s,filter .2s,box-shadow .2s
     }
-    .btn:hover{ filter:brightness(1.05); box-shadow: 0 10px 22px rgba(239,68,68,.32); }
-    .btn:active{ transform: translateY(1px) scale(.99); }
+    .btn:hover{filter:brightness(1.05);box-shadow:0 10px 22px rgba(239,68,68,.32)}
+    .btn:active{transform:translateY(1px) scale(.99)}
+    .est{margin-top:var(--sp-2);background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:var(--sp-1)}
+    .est-row{display:flex;align-items:center;justify-content:space-between}
+    .price{font-size:28px;font-weight:800;color:var(--brand)}
+    .note{font-size:12px;color:var(--muted);margin-top:6px}
 
-    .grid{display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); margin-top:12px;}
-    .slot{border:1px dashed #fecaca; border-radius:12px; padding:16px; background:linear-gradient(135deg,#fff,#fef2f2); display:flex; flex-direction:column; gap:10px;}
-    .pill{display:inline-block; padding:6px 10px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:999px; font-weight:700; font-size:.8rem;}
-
-    .list{display:grid; gap:10px; margin-top:10px;}
-    .item{display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:12px; background:#fff; padding:10px;}
-    .thumb{width:40px; height:40px; border-radius:8px; background:#f3f4f6; display:grid; place-items:center; font-weight:800; color:var(--brand);}
-    .divider{height:1px; background:var(--line); margin:var(--sp-1) 0;}
+    /* channel cards grid (RIGHT) */
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .slot{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px}
+    .thumbbox{height:120px;border:1px solid var(--line);border-radius:10px;background:#f3f4f6}
+    .ch-row{display:flex;gap:12px;align-items:center}
+    .thumb{width:44px;height:44px;border-radius:10px;background:#f3f4f6;display:grid;place-items:center;font-weight:800;color:var(--brand)}
+    .title{font-weight:800}
+    .meta{font-size:.85rem;color:var(--muted)}
   </style>
 </head>
 <body>
   <main class="wrap">
-    <!-- LEFT: channels + estimate -->
+    <!-- LEFT: add channel + estimate -->
     <section class="card">
-      <h1>How many channels?</h1>
-      <p>Choose how many you plan to connect now. You can add more anytime.</p>
+      <h1>Add a channel</h1>
+      <p>Connect the Google account that owns a channel you want in your dashboard.</p>
 
-      <label for="count" style="font-weight:600; margin-bottom:6px;">Channels to add</label>
-      <div class="select">
-        <select id="count">
-          <option>0</option><option>1</option><option>2</option><option>3</option><option>4</option>
-          <option>5</option><option>6</option><option>7</option><option>8</option><option>9</option>
-          <option>10</option><option>12</option><option>15</option><option>20</option>
-          <option>25</option><option>30</option><option>40</option><option>50</option>
-        </select>
-      </div>
+      <button type="button" class="btn" id="connectBtn">Connect Google</button>
 
       <div class="est">
-        <div class="est-row">
-          <div class="muted">Plan</div>
-          <div id="current-plan" style="font-weight:800;">—</div>
-        </div>
-        <div class="divider"></div>
-        <div class="est-row">
-          <div style="font-weight:700;">Estimated monthly</div>
-          <div class="price" id="est-price">$0</div>
-        </div>
-        <div id="est-note" class="note">Estimate updates as you change channels.</div>
+        <div class="est-row"><div class="note">Plan</div><div id="current-plan" style="font-weight:800">—</div></div>
+        <div class="est-row" style="margin-top:10px;"><div style="font-weight:700">Estimated monthly</div><div class="price" id="est-price">$0</div></div>
+        <div class="note" id="est-note">Estimate updates as you add channels.</div>
       </div>
 
-      <div style="margin-top: var(--sp-1);">
-        <button class="btn" id="apply">Update slots</button>
-      </div>
-
-      <p class="note" style="margin-top: var(--sp-2);">Each “channel” can be from YouTube, Instagram, or TikTok.</p>
+      <p class="note" style="margin-top:var(--sp-2)">Each “channel” can be from YouTube, Instagram, or TikTok.</p>
     </section>
 
-    <!-- RIGHT: linking UI -->
+    <!-- RIGHT: only the channel cards -->
     <section class="card">
-      <h2>Link your channels</h2>
-      <p>Click “Connect Google” in each slot to authorize the channel owner account.</p>
-
-      <div id="slots" class="grid" aria-live="polite"></div>
-
-      <div class="divider"></div>
-      <h2>Linked Channels</h2>
-      <div id="chan-list" class="list"></div>
+      <div id="chan-grid" class="grid" aria-live="polite"></div>
     </section>
   </main>
 
   <script>
     // ---------- State ----------
-    let count = 0;          // how many slots to render
-    let plan  = 'basic';    // basic | creator | pro
+    let plan = 'basic';            // 'basic' | 'creator' | 'pro'
+    let channels = [];             // loaded from backend
 
     // ---------- Helpers ----------
-    const $ = (id) => document.getElementById(id);
+    const $ = id => document.getElementById(id);
+    const cap = s => s ? s[0].toUpperCase() + s.slice(1) : '';
 
     function computePrice(p, n){
-      if (p === 'basic') return (n <= 3) ? 0 : 'upgrade';
-      if (p === 'creator') return 7 + 2*n;
-      if (p === 'pro') return 10 + 2*n;
+      if (p === 'basic')   return (n <= 3) ? 0 : 'upgrade';
+      if (p === 'creator') return 7 + 2 * n;
+      if (p === 'pro')     return 10 + 2 * n;
       return 0;
     }
 
-    function setPlan(newPlan){
-      if (!newPlan) return;
-      const p = String(newPlan).toLowerCase();
+    function setPlan(p){
       if (!['basic','creator','pro'].includes(p)) return;
       plan = p;
       sessionStorage.setItem('reunifyd_plan', plan);
-      $('current-plan').textContent = p[0].toUpperCase() + p.slice(1);
+      $('current-plan').textContent = cap(plan);
       updateEstimate();
     }
 
-    function planFromAny(){
-      // 1) message from previous page (postMessage) — handled below
-      // 2) URL ?plan=
+    function planFromUrlOrSession(){
       const u = new URL(window.location.href);
       const q = (u.searchParams.get('plan') || '').toLowerCase();
       if (['basic','creator','pro'].includes(q)) return q;
-      // 3) sessionStorage (set by pricing page or previous visit)
       const mem = (sessionStorage.getItem('reunifyd_plan') || '').toLowerCase();
       if (['basic','creator','pro'].includes(mem)) return mem;
       return 'basic';
     }
 
     function updateEstimate(){
-      const n = parseInt($('count').value || '0', 10);
-      count = isNaN(n) ? 0 : n;
-
-      const res = computePrice(plan, count);
-      const priceEl = $('est-price');
-      const noteEl  = $('est-note');
-
+      const n = channels.length;
+      const res = computePrice(plan, n);
       if (res === 'upgrade'){
-        priceEl.textContent = 'Upgrade required';
-        noteEl.textContent  = 'Basic is free for up to 3 total channels across platforms.';
+        $('est-price').textContent = 'Upgrade required';
+        $('est-note').textContent  = 'Basic is free for up to 3 total channels.';
       } else {
-        priceEl.textContent = plan === 'basic' ? '$0' : `$${res.toFixed(2)}/mo`;
-        noteEl.textContent  = (plan === 'creator')
+        $('est-price').textContent = plan === 'basic' ? '$0' : `$${res.toFixed(2)}/mo`;
+        $('est-note').textContent  = (plan === 'creator')
           ? 'Creator pricing: $7 base + $2 per channel.'
           : (plan === 'pro')
             ? 'Pro pricing: $10 base + $2 per channel.'
@@ -195,84 +120,102 @@
       }
     }
 
-    function renderSlots(){
-      const host = $('slots');
+    function renderChannelCards(){
+      const host = $('chan-grid');
       host.innerHTML = '';
-      for (let i = 0; i < count; i++){
-        const el = document.createElement('div');
-        el.className = 'slot';
-        el.innerHTML = `
-          <div class="pill">Channel Slot ${i+1}</div>
-          <div class="muted">Connect the Google account that owns this channel.</div>
-          <div><button class="btn" onclick="connectGoogle(${i})">Connect Google</button></div>`;
-        host.appendChild(el);
+
+      if (!channels.length){
+        // Optional placeholder card when empty
+        const empty = document.createElement('div');
+        empty.className = 'slot';
+        empty.innerHTML = `
+          <div class="thumbbox"></div>
+          <div class="title">No channels linked yet</div>
+          <div class="meta">Use “Connect Google” to add your first channel.</div>`;
+        host.appendChild(empty);
+        return;
       }
+
+      channels.forEach((c, idx)=>{
+        const card = document.createElement('div');
+        card.className = 'slot';
+        const thumbBig = c.banner_url
+          ? `<img src="${c.banner_url}" class="thumbbox" style="object-fit:cover;border-radius:10px">`
+          : `<div class="thumbbox"></div>`;
+        const thumbSmall = c.thumbnail_url
+          ? `<img src="${c.thumbnail_url}" class="thumb" alt="">`
+          : `<div class="thumb">YT</div>`;
+        const subs = (typeof c.subscriber_count === 'number') ? c.subscriber_count.toLocaleString() : '—';
+
+        card.innerHTML = `
+          ${thumbBig}
+          <div class="ch-row">
+            ${thumbSmall}
+            <div>
+              <div class="title">${c.title || 'Channel ' + (idx+1)}</div>
+              <div class="meta">Subs: ${subs}</div>
+            </div>
+          </div>`;
+        host.appendChild(card);
+      });
     }
 
-    function connectGoogle(i){
-      // After OAuth, backend should redirect back here (preserve plan)
-      const next = `/ui/link.html?plan=${encodeURIComponent(plan)}&linked=1`;
-      window.location.href = `/auth/google/init?next=${encodeURIComponent(next)}`;
+    // OAuth flow — use the simple working pattern from your older file
+    function connectGoogle(){
+      // Keep plan in session so we can restore after OAuth
+      sessionStorage.setItem('reunifyd_plan', plan);
+      // Navigate to backend OAuth; backend should redirect back to /ui/link.html after success
+      window.location.href = `/auth/google/init?next=/ui/link.html`;
     }
 
     async function ensureAuth(){
       const r = await fetch('/auth/connected');
-      if(!r.ok) window.location.href = '/ui/login.html';
+      if(!r.ok){ window.location.href = '/ui/login.html'; }
     }
 
     async function loadChannels(){
       try{
         const r = await fetch('/youtube/channels');
-        if(!r.ok) return;
+        if(!r.ok) return [];
         const data = await r.json();
-        const list = $('chan-list');
-        list.innerHTML = '';
-        (data.channels||[]).forEach(c=>{
-          const row = document.createElement('div');
-          row.className = 'item';
-          const t = c.thumbnail_url ? `<img class="thumb" src="${c.thumbnail_url}" alt="">` : `<div class="thumb">YT</div>`;
-          row.innerHTML = `${t}<div><div style="font-weight:800">${c.title}</div><div class="muted" style="font-size:.85rem">${c.yt_channel_id}</div></div>`;
-          list.appendChild(row);
-        });
-      }catch(_e){}
+        return data.channels || [];
+      }catch{ return []; }
     }
 
-    // ---------- Init ----------
-    window.addEventListener('DOMContentLoaded', async ()=>{
+    async function bootstrap(){
       await ensureAuth();
 
-      // pick up plan from any source
-      setPlan(planFromAny());
+      // Plan from URL/session
+      setPlan(planFromUrlOrSession());
 
-      // handle changes
-      $('count').addEventListener('change', ()=>{ updateEstimate(); });
-      $('apply').addEventListener('click', ()=>{ updateEstimate(); renderSlots(); });
+      // Load channels and draw UI
+      channels = await loadChannels();
+      renderChannelCards();
+      updateEstimate();
 
-      // success toast after redirect
+      // If we just returned from OAuth, quietly clear the flag in URL (no alert)
       const url = new URL(window.location.href);
       if (url.searchParams.get('linked')){
-        alert('Channel linked successfully.');
         url.searchParams.delete('linked');
-        history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString());
+        history.replaceState({}, '', url.pathname + url.search);
       }
 
-      await loadChannels();
-      updateEstimate();
-      renderSlots(); // initial
-    });
+      // Wire up the connect button
+      $('connectBtn').addEventListener('click', (e)=>{
+        e.preventDefault(); // ensure no accidental submit/refresh
+        connectGoogle();
+      });
 
-    // ---------- Listener for the pricing page ----------
-    // Pricing page can call: window.opener?.postMessage({type:'reunifyd:setPlan', plan:'creator'}, '*')
-    // or window.parent.postMessage(...) depending on your nav flow.
-    window.addEventListener('message', (event)=>{
-      // If you know your domain, replace '*' check with a strict origin check for security.
-      try{
-        if (!event?.data) return;
-        if (event.data.type === 'reunifyd:setPlan' && event.data.plan){
-          setPlan(event.data.plan);
+      // Optional: accept plan via postMessage too
+      window.addEventListener('message', (evt)=>{
+        if (evt?.data?.type === 'reunifyd:setPlan' && evt.data.plan){
+          setPlan(String(evt.data.plan).toLowerCase());
+          updateEstimate();
         }
-      }catch(_e){}
-    });
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', bootstrap);
   </script>
 </body>
 </html>
