@@ -7,10 +7,13 @@ router = APIRouter(prefix="/test", tags=["test"])
 
 @router.post("/seed")
 def seed_user(session: Session = Depends(get_session)):
-    u = User(email="seed@example.com")
-    session.add(u)
-    session.commit()
-    session.refresh(u)
+    email = "seed@example.com"
+    u = session.exec(select(User).where(User.email == email)).first()
+    if not u:
+        u = User(email=email, name="Seed User")
+        session.add(u)
+        session.commit()
+        session.refresh(u)
     return {"id": u.id, "email": u.email}
 
 @router.get("/users")

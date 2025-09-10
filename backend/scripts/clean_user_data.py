@@ -1,6 +1,7 @@
+# backend/scripts/clean_user_data.py
 """
-Utility to wipe all user data (users, google accounts, channels, metrics)
-from the local dev database. Keeps schema and Alembic version.
+Utility to wipe all user data (users, connected accounts, channels, videos, metrics)
+from the local dev database. Keeps schema objects and Alembic version.
 
 Usage (from backend/):
   python scripts/clean_user_data.py --yes
@@ -14,27 +15,37 @@ from sqlmodel import Session
 
 from app.db.core import engine, DATABASE_URL
 
-
-TABLES = [
-    "metricdaily",
-    "videomap",
+# Delete children first → parents later (respect FKs; avoid relying on cascades)
+TABLES_IN_DELETE_ORDER = [
+    # Hourly + Daily metrics first
+    "video_hourly_metrics",
+    "channel_hourly_metrics",
+    "video_daily_metrics",
+    "channel_daily_metrics",
+    # Content & mappings
+    "video",
+    "user_channel",
     "channel",
-    "googleaccount",
+    # Auth/Accounts
+    "oauth_credential",
+    "platform_account",
+    # Finally users
     "user",
+    # NOTE: we intentionally DO NOT touch the 'platform' table
 ]
 
 
 def wipe_all() -> dict[str, int]:
     deleted: dict[str, int] = {}
     with Session(engine) as session:
-        for t in TABLES:
-            # count
-            cnt = session.exec(sa.text(f"SELECT COUNT(*) AS c FROM {t}")).one()[0]
+        for t in TABLES_IN_DELETE_ORDER:
+            # Count then delete
+            cnt = session.exec(sa.text(f"SELECT COUNT(*) FROM {t}")).one()[0]
             session.exec(sa.text(f"DELETE FROM {t}"))
             deleted[t] = int(cnt or 0)
         session.commit()
 
-    # Optionally VACUUM for sqlite
+    # Optional VACUUM for SQLite file DB to reclaim space
     try:
         if str(DATABASE_URL).startswith("sqlite"):
             with engine.connect() as conn:
@@ -51,7 +62,8 @@ def main():
     args = parser.parse_args()
 
     if not args.yes:
-        print("This will DELETE all user data (users, tokens, channels, metrics).")
+        print("This will DELETE all user data (users, accounts, channels, videos, metrics).")
+        print("Schema and Alembic version will be preserved. 'platform' table is not touched.")
         ans = input("Type 'DELETE' to confirm: ").strip()
         if ans != "DELETE":
             print("Aborted.")
@@ -65,4 +77,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

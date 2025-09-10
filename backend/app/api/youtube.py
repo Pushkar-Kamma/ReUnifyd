@@ -6,18 +6,39 @@ import httpx
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import Session, select
+from typing import Optional
 
 from app.api.deps import require_user_id
 from ..db.core import get_session
-from ..db.models import GoogleAccount, Channel, MetricDaily
+from ..db.models import (
+    User,
+    Platform,
+    PlatformAccount,
+    OAuthCredential,
+    Channel,
+    UserChannel,
+    Video,
+    ChannelDailyMetrics,
+    VideoDailyMetrics,
+)
 from ..services.token_helper import (
     get_valid_access_token,
-    refresh_and_persist_access_token,
     get_valid_access_token_for_channel,
 )
-from ..db.models import User
 
 router = APIRouter()
+
+# ----------------------------
+# helpers
+# ----------------------------
+
+def _user_channel(session: Session, user_id: int, channel_id: int) -> Optional[Channel]:
+    """Return the Channel if the user is linked to it, else None."""
+    return session.exec(
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Channel.id == channel_id, Channel.is_active == True)
+    ).first()
 
 async def _yt_analytics_get(request, token: str, params: dict):
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -27,102 +48,8 @@ async def _yt_analytics_get(request, token: str, params: dict):
             headers={"Authorization": f"Bearer {token}"},
         )
 
-
-async def _ingest_breakdown(
-    request: Request,
-    session: Session,
-    c: Channel,
-    vid: str,
-    token: str,
-    start: dt.date,
-    end: dt.date,
-    dimension: str,
-    metrics: list[str],
-    key_header: str,
-):
-    from ..db.models import MetricBreakdownDaily
-    params = {
-        "ids": f"channel=={c.yt_channel_id}",
-        "startDate": start.isoformat(),
-        "endDate": end.isoformat(),
-        "metrics": ",".join(metrics),
-        "dimensions": f"day,{dimension}",
-        "filters": f"video=={vid}",
-    }
-    r = await _yt_analytics_get(request, token, params)
-    if r.status_code == 401:
-        ga = session.get(GoogleAccount, c.google_account_id)
-        if ga:
-            token = await refresh_and_persist_access_token(request, session, ga)
-            r = await _yt_analytics_get(request, token, params)
-    try:
-        r.raise_for_status()
-    except httpx.HTTPStatusError:
-        return 0
-    data = r.json()
-    headers = [h["name"] for h in data.get("columnHeaders", [])]
-    rows = data.get("rows", []) or []
-    idx = {name: i for i, name in enumerate(headers)}
-    def _get(row, name, default=None):
-        i = idx.get(name)
-        return row[i] if i is not None and i < len(row) else default
-    inserted = 0
-    for row in rows:
-        try:
-            day = dt.date.fromisoformat(_get(row, "day"))
-        except Exception:
-            continue
-        # Compose key. For age/gender combined dimensions, capture both.
-        if dimension == "ageGroup,gender":
-            age = _get(row, "ageGroup")
-            gen = _get(row, "gender")
-            key = f"{age}|{gen}"
-        else:
-            key = _get(row, key_header)
-        if key is None:
-            # some responses may use a different header name; pick the first non-day string column
-            for h in headers:
-                if h not in ("day",) and not h.startswith("_") and h not in metrics:
-                    key = _get(row, h)
-                    if key is not None:
-                        break
-        views = int(_get(row, "views", 0) or 0)
-        wt = float(_get(row, "estimatedMinutesWatched", 0) or 0.0)
-        impr = int(_get(row, "impressions", 0) or 0)
-        ctr = float(_get(row, "impressionsClickThroughRate", 0) or 0.0)
-        likes = int(_get(row, "likes", 0) or 0)
-        sg = int(_get(row, "subscribersGained", 0) or 0)
-        sl = int(_get(row, "subscribersLost", 0) or 0)
-        rev = float(_get(row, "estimatedRevenue", 0) or 0.0)
-        # delete+insert
-        session.exec(
-            sa.text(
-                "DELETE FROM metricbreakdowndaily WHERE channel_id=:cid AND video_id=:vid AND date=:d AND dimension=:dim AND key=:k"
-            ),
-            {"cid": c.id, "vid": vid, "d": day, "dim": dimension, "k": str(key)},
-        )
-        session.add(MetricBreakdownDaily(
-            channel_id=c.id,
-            video_id=vid,
-            date=day,
-            dimension=dimension,
-            key=str(key),
-            views=views,
-            watch_time_min=int(round(wt)),
-            impressions=impr,
-            impressions_ctr_pct=ctr * 100.0,
-            likes=likes,
-            subs_gained=sg,
-            subs_lost=sl,
-            est_revenue_minor=int(round(rev*100)),
-        ))
-        inserted += 1
-    session.commit()
-    return inserted
-
-
 # ----------------------------
-# Existing endpoint (user's own channels via "mine=true")
+# Me: YouTube account channels via "mine=true"
 # ----------------------------
 @router.get("/channels/me")
 async def channels_me(
@@ -131,51 +58,44 @@ async def channels_me(
     session: Session = Depends(get_session),
 ):
     """
-    Returns the authenticated user's channel info.
-
-    Flow:
-      1) Get/refresh a usable access token (using the refresh token if needed).
-      2) Call YouTube channels.list?mine=true.
-      3) If Google replies 401, refresh once and retry.
+    Calls YouTube Data API channels.list?mine=true for the current user's linked YouTube account.
     """
-    # 1) Ensure the user has a linked GoogleAccount row
-    ga = session.exec(
-        select(GoogleAccount).where(GoogleAccount.user_id == user_id)
-    ).first()
-    if not ga:
-        raise HTTPException(status_code=400, detail="no connected Google account")
+    yt = session.exec(select(Platform).where(Platform.name == "youtube")).first()
+    if not yt:
+        raise HTTPException(status_code=400, detail="youtube platform not configured")
 
-    # 2) Obtain a valid access token (helper may refresh or bootstrap)
+    pa = session.exec(
+        select(PlatformAccount).where(
+            PlatformAccount.platform_id == yt.id,
+            PlatformAccount.owner_user_id == user_id,
+        )
+    ).first()
+    if not pa:
+        raise HTTPException(status_code=400, detail="no connected YouTube account")
+
     try:
         access_token = await get_valid_access_token(request, session, user_id)
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-    # Helper to call YouTube once with a given token
-    async def call_youtube(token: str) -> httpx.Response:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            return await client.get(
-                "https://www.googleapis.com/youtube/v3/channels",
-                params={"part": "snippet,contentDetails,statistics", "mine": "true"},
-                headers={"Authorization": f"Bearer {token}"},
-            )
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.get(
+            "https://www.googleapis.com/youtube/v3/channels",
+            params={"part": "snippet,contentDetails,statistics", "mine": "true"},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
 
-    # 3) First attempt
-    resp = await call_youtube(access_token)
-
-    # 4) If stale ⇒ 401, refresh once and retry
     if resp.status_code == 401:
         try:
-            new_access = await refresh_and_persist_access_token(request, session, ga)
+            access_token = await get_valid_access_token(request, session, user_id)
         except RuntimeError as e:
             raise HTTPException(status_code=401, detail=str(e))
-        resp = await call_youtube(new_access)
-
-    if resp.status_code == 401:
-        raise HTTPException(
-            status_code=401,
-            detail="unauthorized from YouTube API (token likely revoked or missing scopes)",
-        )
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.get(
+                "https://www.googleapis.com/youtube/v3/channels",
+                params={"part": "snippet,contentDetails,statistics", "mine": "true"},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
 
     try:
         resp.raise_for_status()
@@ -185,14 +105,15 @@ async def channels_me(
     data = resp.json()
     return {
         "ok": True,
-        "user_id": user_id,
-        "google_account_id": getattr(ga, "id", None),
+        # new schema
+        "platform_account_id": pa.id,
+        # legacy compatibility (old code expected this key)
+        "google_account_id": None,
         "channels": data,
     }
 
-
 # ----------------------------
-# NEW: list all channels stored for this user (multi-account safe)
+# List stored channels for user
 # ----------------------------
 @router.get("/channels")
 def list_channels(
@@ -200,34 +121,32 @@ def list_channels(
     session: Session = Depends(get_session),
 ):
     chans = session.exec(
-        select(Channel).where(Channel.user_id == user_id, Channel.active == True)
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Channel.is_active == True)
     ).all()
-    # include quota & remaining
-    from ..db.models import User
-    u = session.get(User, user_id)
-    quota = getattr(u, "link_quota", None)
     total = len(chans)
-    remaining = None if quota is None else max(0, int(quota) - total)
+
     return {
         "ok": True,
-        "quota": quota,
+        # legacy placeholders to avoid breaking old UI code
+        "quota": None,
+        "remaining": None,
         "total": total,
-        "remaining": remaining,
         "channels": [
             {
                 "id": c.id,
-                "yt_channel_id": c.yt_channel_id,
+                "external_channel_id": c.external_channel_id,
                 "title": c.title,
-                "thumbnail_url": c.thumbnail_url,
+                "avatar_url": c.avatar_url,
                 "last_synced_at": c.last_synced_at,
             }
             for c in chans
         ],
     }
 
-
 # ----------------------------
-# NEW: incremental daily sync for a specific channel
+# Incremental daily sync for a specific channel
 # ----------------------------
 @router.post("/sync/daily")
 async def sync_daily(
@@ -239,40 +158,32 @@ async def sync_daily(
 ):
     """
     Incremental sync of daily metrics for a channel.
-    Enforces an "8-hour" guard via last_synced_at on the Channel.
     """
-    # Ensure the channel belongs to this user
-    c = session.get(Channel, channel_id)
-    if not c or c.user_id != user_id:
+    c = _user_channel(session, user_id, channel_id)
+    if not c:
         raise HTTPException(status_code=404, detail="channel not found")
 
     # 8-hour guard
     if c.last_synced_at and (dt.datetime.utcnow() - c.last_synced_at).total_seconds() < 8 * 3600:
         return {"ok": True, "skipped": True, "reason": "recently synced"}
 
-    # get valid token for THIS channel (picks the right GoogleAccount)
     try:
         token = await get_valid_access_token_for_channel(request, session, channel_id)
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-    # decide date range (incremental)
     end = dt.date.today()
     start = end - dt.timedelta(days=max(1, days) - 1)
 
-    # YouTube Analytics API call for daily, channel-level
     params = {
-        "ids": f"channel=={c.yt_channel_id}",
+        "ids": f"channel=={c.external_channel_id}",
         "startDate": start.isoformat(),
         "endDate": end.isoformat(),
         "metrics": ",".join([
             "views",
             "estimatedMinutesWatched",
-            "averageViewDuration",
-            "averageViewPercentage",
             "impressions",
             "impressionsClickThroughRate",
-            "likes",
             "subscribersGained",
             "subscribersLost",
             "estimatedRevenue",
@@ -288,15 +199,10 @@ async def sync_daily(
         )
 
     if r.status_code == 401:
-        # token likely stale for this GA; refresh against the GA tied to this channel then retry
-        ga = session.get(GoogleAccount, c.google_account_id)
-        if not ga:
-            raise HTTPException(status_code=404, detail="google account not found for channel")
         try:
-            token = await refresh_and_persist_access_token(request, session, ga)
+            token = await get_valid_access_token_for_channel(request, session, channel_id)
         except RuntimeError as e:
             raise HTTPException(status_code=401, detail=str(e))
-
         async with httpx.AsyncClient(timeout=30.0) as client:
             r = await client.get(
                 "https://youtubeanalytics.googleapis.com/v2/reports",
@@ -310,94 +216,56 @@ async def sync_daily(
         raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
 
     data = r.json()
-
-    # Persist rows
     headers = [h["name"] for h in data.get("columnHeaders", [])]
     rows = data.get("rows", []) or []
-
     idx = {name: i for i, name in enumerate(headers)}
 
     def _get(row, name, default=None):
         i = idx.get(name)
         return row[i] if i is not None and i < len(row) else default
 
+    inserted = 0
     for row in rows:
         day = dt.date.fromisoformat(_get(row, "day"))
         views = int(_get(row, "views", 0) or 0)
-        wt = float(_get(row, "estimatedMinutesWatched", 0) or 0.0)  # minutes
-        avgd = float(_get(row, "averageViewDuration", 0) or 0.0)  # seconds
-        avgp = float(_get(row, "averageViewPercentage", 0) or 0.0)
+        wtm = float(_get(row, "estimatedMinutesWatched", 0) or 0.0)
         impr = int(_get(row, "impressions", 0) or 0)
-        ctr = float(_get(row, "impressionsClickThroughRate", 0) or 0.0)  # 0..1
-        likes = int(_get(row, "likes", 0) or 0)
+        ctr0_1 = float(_get(row, "impressionsClickThroughRate", 0) or 0.0)
         sg = int(_get(row, "subscribersGained", 0) or 0)
         sl = int(_get(row, "subscribersLost", 0) or 0)
         rev = float(_get(row, "estimatedRevenue", 0) or 0.0)
 
-        # Upsert by delete+insert (dev-simple)
         session.exec(
             sa.text(
-                "DELETE FROM metricdaily WHERE channel_id = :cid AND video_id IS NULL AND date = :d"
+                "DELETE FROM channel_daily_metrics WHERE channel_id = :cid AND date = :d"
             ),
             {"cid": c.id, "d": day},
         )
-
         session.add(
-            MetricDaily(
+            ChannelDailyMetrics(
                 channel_id=c.id,
-                video_id=None,
                 date=day,
+                subscribers_total=None,
+                subscribers_gained=sg,
+                subscribers_lost=sl,
                 views=views,
-                watch_time_min=int(round(wt)),  # minutes
-                avg_view_duration_sec=int(round(avgd)),  # seconds
+                watch_time_minutes=int(round(wtm)),
                 impressions=impr,
-                impressions_ctr_pct=ctr * 100.0,  # 0..1 -> %
-                avg_pct_viewed=avgp,
-                likes=likes,
-                subs_gained=sg,
-                subs_lost=sl,
-                est_revenue_minor=int(round(rev * 100)),  # dollars -> cents
+                click_through_rate=ctr0_1 * 100.0,
+                estimated_revenue=rev,
+                revenue_currency=None,
             )
         )
+        inserted += 1
 
     c.last_synced_at = dt.datetime.utcnow()
     session.add(c)
     session.commit()
 
-    return {"ok": True, "inserted_rows": len(rows), "channel_id": c.id}
-
-
-# ----------------------------
-# Debug: per-user GA status (no secrets)
-# ----------------------------
-@router.get("/debug/googleaccount")
-def debug_googleaccount(
-    user_id: int = Depends(require_user_id),
-    session: Session = Depends(get_session),
-):
-    """
-    Simple debug endpoint to see what we have stored for the current user.
-    (Does not reveal token strings.)
-    """
-    ga = session.exec(
-        select(GoogleAccount).where(GoogleAccount.user_id == user_id)
-    ).first()
-    if not ga:
-        raise HTTPException(status_code=404, detail="no google account row")
-
-    return {
-        "ok": True,
-        "user_id": user_id,
-        "google_account_id": getattr(ga, "id", None),
-        "has_access_token": bool(getattr(ga, "access_token_enc", None)),
-        "has_refresh_token": bool(getattr(ga, "refresh_token", None)),  # property decrypts safely
-        "status": getattr(ga, "status", None),
-        "created_at": str(getattr(ga, "created_at", None)),
-    }
-
+    return {"ok": True, "inserted_rows": inserted, "channel_id": c.id}
 
 # ----------------------------
-# List videos known for a channel (from VideoMap)
+# List videos known for a channel (Video)
 # ----------------------------
 @router.get("/videos")
 def list_videos(
@@ -405,29 +273,28 @@ def list_videos(
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
-    c = session.get(Channel, channel_id)
-    if not c or c.user_id != user_id:
+    c = _user_channel(session, user_id, channel_id)
+    if not c:
         raise HTTPException(status_code=404, detail="channel not found")
-    from ..db.models import VideoMap
-    vids = session.exec(select(VideoMap).where(VideoMap.channel_id == c.id)).all()
+    vids = session.exec(select(Video).where(Video.channel_id == c.id, Video.is_active == True)).all()
     return {
         "ok": True,
         "videos": [
             {
                 "id": v.id,
-                "yt_video_id": v.yt_video_id,
+                "external_video_id": v.external_video_id,
                 "title": v.title,
                 "thumbnail_url": v.thumbnail_url,
                 "published_at": v.published_at,
-                "status": v.status,
+                "privacy_status": v.privacy_status,
+                "content_type": v.content_type,
             }
             for v in vids
         ],
     }
 
-
 # ----------------------------
-# Initial full sync for a channel (videos + per-video daily metrics)
+# Initial full sync (videos + per-video daily metrics)
 # ----------------------------
 @router.post("/sync/full")
 async def sync_full(
@@ -437,8 +304,8 @@ async def sync_full(
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
-    c = session.get(Channel, channel_id)
-    if not c or c.user_id != user_id:
+    c = _user_channel(session, user_id, channel_id)
+    if not c:
         raise HTTPException(status_code=404, detail="channel not found")
 
     try:
@@ -451,29 +318,22 @@ async def sync_full(
         async with httpx.AsyncClient(timeout=20.0) as client:
             ch_resp = await client.get(
                 "https://www.googleapis.com/youtube/v3/channels",
-                params={"part": "contentDetails", "id": c.yt_channel_id},
+                params={"part": "contentDetails", "id": c.external_channel_id},
                 headers={"Authorization": f"Bearer {token}"},
             )
-        # If the cached access token is stale, refresh and retry once
         if ch_resp.status_code == 401:
-            ga = session.get(GoogleAccount, c.google_account_id)
-            if not ga:
-                raise HTTPException(status_code=404, detail="google account not found for channel")
-            token = await refresh_and_persist_access_token(request, session, ga)
+            token = await get_valid_access_token_for_channel(request, session, channel_id)
             async with httpx.AsyncClient(timeout=20.0) as client:
                 ch_resp = await client.get(
                     "https://www.googleapis.com/youtube/v3/channels",
-                    params={"part": "contentDetails", "id": c.yt_channel_id},
+                    params={"part": "contentDetails", "id": c.external_channel_id},
                     headers={"Authorization": f"Bearer {token}"},
                 )
         ch_resp.raise_for_status()
-        uploads = (
-            ch_resp.json()["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
-        )
+        uploads = ch_resp.json()["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
 
-        video_ids = []
-        next_page = None
-        from ..db.models import VideoMap
+        video_ids_external: list[str] = []
+        next_page: Optional[str] = None
         while True:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 pl_resp = await client.get(
@@ -486,12 +346,8 @@ async def sync_full(
                     },
                     headers={"Authorization": f"Bearer {token}"},
                 )
-            # Handle stale access token during pagination as well
             if pl_resp.status_code == 401:
-                ga = session.get(GoogleAccount, c.google_account_id)
-                if not ga:
-                    raise HTTPException(status_code=404, detail="google account not found for channel")
-                token = await refresh_and_persist_access_token(request, session, ga)
+                token = await get_valid_access_token_for_channel(request, session, channel_id)
                 async with httpx.AsyncClient(timeout=20.0) as client:
                     pl_resp = await client.get(
                         "https://www.googleapis.com/youtube/v3/playlistItems",
@@ -506,39 +362,51 @@ async def sync_full(
             pl_resp.raise_for_status()
             plj = pl_resp.json()
             for it in plj.get("items", []):
-                vid = it["contentDetails"]["videoId"]
-                title = it["snippet"].get("title")
+                vid_ext = it["contentDetails"]["videoId"]
+                snippet = it.get("snippet", {}) or {}
+                title = snippet.get("title")
                 published_at = it["contentDetails"].get("videoPublishedAt")
-                thumb = (
-                    it["snippet"].get("thumbnails", {}).get("default", {}).get("url")
-                )
-                row = session.exec(
-                    select(VideoMap).where(VideoMap.yt_video_id == vid, VideoMap.channel_id == c.id)
+                thumb = snippet.get("thumbnails", {}).get("default", {}).get("url")
+
+                # Upsert Video by (platform_id, external_video_id)
+                v = session.exec(
+                    select(Video).where(
+                        Video.platform_id == c.platform_id,
+                        Video.external_video_id == vid_ext,
+                    )
                 ).first()
-                if row:
+                if v:
                     if title:
-                        row.title = title
-                    row.thumbnail_url = thumb or row.thumbnail_url
+                        v.title = title
+                    v.thumbnail_url = thumb or v.thumbnail_url
                     if published_at:
                         try:
-                            row.published_at = dt.datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                            v.published_at = dt.datetime.fromisoformat(published_at.replace("Z", "+00:00"))
                         except Exception:
                             pass
+                    v.channel_id = c.id
+                    v.is_active = True
+                    session.add(v)
                 else:
-                    session.add(
-                        VideoMap(
-                            channel_id=c.id,
-                            yt_video_id=vid,
-                            title=title or "",
-                            thumbnail_url=thumb,
-                            published_at=(
-                                dt.datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-                                if published_at else None
-                            ),
-                        )
+                    v = Video(
+                        platform_id=c.platform_id,
+                        channel_id=c.id,
+                        external_video_id=vid_ext,
+                        title=title or "",
+                        description=None,
+                        category=None,
+                        privacy_status=None,
+                        content_type="video",
+                        duration_seconds=None,
+                        published_at=(dt.datetime.fromisoformat(published_at.replace("Z", "+00:00")) if published_at else None),
+                        thumbnail_url=thumb,
+                        tags=None,
+                        last_synced_at=None,
+                        is_active=True,
                     )
-                video_ids.append(vid)
-            session.commit()
+                    session.add(v)
+                session.commit()
+                video_ids_external.append(vid_ext)
             next_page = plj.get("nextPageToken")
             if not next_page:
                 break
@@ -550,9 +418,10 @@ async def sync_full(
     start = end - dt.timedelta(days=max(1, days) - 1)
     inserted = 0
     videos_with_metrics: set[str] = set()
-    for vid in video_ids:
+
+    for vid_ext in video_ids_external:
         params = {
-            "ids": f"channel=={c.yt_channel_id}",
+            "ids": f"channel=={c.external_channel_id}",
             "startDate": start.isoformat(),
             "endDate": end.isoformat(),
             "metrics": ",".join([
@@ -563,75 +432,85 @@ async def sync_full(
                 "impressions",
                 "impressionsClickThroughRate",
                 "likes",
+                "comments",
+                "shares",
                 "subscribersGained",
-                "subscribersLost",
                 "estimatedRevenue",
             ]),
             "dimensions": "day",
-            "filters": f"video=={vid}",
+            "filters": f"video=={vid_ext}",
         }
         r = await _yt_analytics_get(request, token, params)
         if r.status_code == 401:
-            ga = session.get(GoogleAccount, c.google_account_id)
-            if not ga:
-                raise HTTPException(status_code=404, detail="google account not found for channel")
-            token = await refresh_and_persist_access_token(request, session, ga)
+            token = await get_valid_access_token_for_channel(request, session, channel_id)
             r = await _yt_analytics_get(request, token, params)
         try:
             r.raise_for_status()
         except httpx.HTTPStatusError:
-            # Keep track of failures; we'll try a fallback using Data API stats later
+            # fallback later with Data API
             continue
+
         data = r.json()
         headers = [h["name"] for h in data.get("columnHeaders", [])]
         rows = data.get("rows", []) or []
         idx = {name: i for i, name in enumerate(headers)}
+
         def _get(row, name, default=None):
             i = idx.get(name)
             return row[i] if i is not None and i < len(row) else default
+
+        v = session.exec(
+            select(Video).where(
+                Video.platform_id == c.platform_id,
+                Video.external_video_id == vid_ext,
+            )
+        ).first()
+        if not v:
+            continue
+
         for row in rows:
             day = dt.date.fromisoformat(_get(row, "day"))
-            views = int(_get(row, "views", 0) or 0)
             emw = float(_get(row, "estimatedMinutesWatched", 0) or 0.0)
             avgd = float(_get(row, "averageViewDuration", 0) or 0.0)
             avgp = float(_get(row, "averageViewPercentage", 0) or 0.0)
             impr = int(_get(row, "impressions", 0) or 0)
-            ctr = float(_get(row, "impressionsClickThroughRate", 0) or 0.0)
+            ctr0_1 = float(_get(row, "impressionsClickThroughRate", 0) or 0.0)
             likes = int(_get(row, "likes", 0) or 0)
-            sg = int(_get(row, "subscribersGained", 0) or 0)
-            sl = int(_get(row, "subscribersLost", 0) or 0)
+            comments = int(_get(row, "comments", 0) or 0)
+            shares = int(_get(row, "shares", 0) or 0)
+            sg_vid = int(_get(row, "subscribersGained", 0) or 0)
+            views = int(_get(row, "views", 0) or 0)
             rev = float(_get(row, "estimatedRevenue", 0) or 0.0)
 
             session.exec(
                 sa.text(
-                    "DELETE FROM metricdaily WHERE channel_id = :cid AND video_id = :vid AND date = :d"
+                    "DELETE FROM video_daily_metrics WHERE video_id = :vid AND date = :d"
                 ),
-                {"cid": c.id, "vid": vid, "d": day},
+                {"vid": v.id, "d": day},
             )
-            session.add(MetricDaily(
-                channel_id=c.id,
-                video_id=vid,
+            session.add(VideoDailyMetrics(
+                video_id=v.id,
                 date=day,
                 views=views,
-                watch_time_min=int(round(emw)),
-                avg_view_duration_sec=int(round(avgd)),
-                avg_pct_viewed=avgp,
-                impressions=impr,
-                impressions_ctr_pct=ctr * 100.0,
+                watch_time_minutes=int(round(emw)),
+                avg_view_duration_seconds=int(round(avgd)),
+                avg_percent_viewed=avgp,
                 likes=likes,
-                subs_gained=sg,
-                subs_lost=sl,
-                est_revenue_minor=int(round(rev * 100)),
+                comments=comments,
+                shares=shares,
+                impressions=impr,
+                click_through_rate=ctr0_1 * 100.0,
+                subs_gained_from_video=sg_vid,
+                estimated_revenue=rev,
+                revenue_currency=None,
             ))
             inserted += 1
-            videos_with_metrics.add(vid)
+            videos_with_metrics.add(vid_ext)
         session.commit()
 
-    # Fallback: for any videos that returned no Analytics rows (e.g., scope
-    # issues), use YouTube Data API to fetch current statistics and store a
-    # snapshot row for today so the dashboard shows non-zero totals.
+    # Fallback snapshot for videos with no Analytics rows
     try:
-        missing = [v for v in video_ids if v not in videos_with_metrics]
+        missing = [v for v in video_ids_external if v not in videos_with_metrics]
         if missing:
             batch = 50
             today = dt.date.today()
@@ -640,45 +519,45 @@ async def sync_full(
                 async with httpx.AsyncClient(timeout=20.0) as client:
                     stats_resp = await client.get(
                         "https://www.googleapis.com/youtube/v3/videos",
-                        params={
-                            "part": "statistics",
-                            "id": ids,
-                        },
+                        params={"part": "statistics", "id": ids},
                         headers={"Authorization": f"Bearer {token}"},
                     )
                 if stats_resp.status_code == 401:
-                    ga = session.get(GoogleAccount, c.google_account_id)
-                    if ga:
-                        token = await refresh_and_persist_access_token(request, session, ga)
-                        async with httpx.AsyncClient(timeout=20.0) as client:
-                            stats_resp = await client.get(
-                                "https://www.googleapis.com/youtube/v3/videos",
-                                params={
-                                    "part": "statistics",
-                                    "id": ids,
-                                },
-                                headers={"Authorization": f"Bearer {token}"},
-                            )
+                    token = await get_valid_access_token_for_channel(request, session, channel_id)
+                    async with httpx.AsyncClient(timeout=20.0) as client:
+                        stats_resp = await client.get(
+                            "https://www.googleapis.com/youtube/v3/videos",
+                            params={"part": "statistics", "id": ids},
+                            headers={"Authorization": f"Bearer {token}"},
+                        )
                 try:
                     stats_resp.raise_for_status()
                 except httpx.HTTPStatusError:
                     continue
                 stj = stats_resp.json()
                 for item in stj.get("items", []):
-                    vid = item.get("id")
+                    vid_ext = item.get("id")
                     st = item.get("statistics", {})
                     views = int(st.get("viewCount", 0) or 0)
                     likes = int(st.get("likeCount", 0) or 0)
-                    # Upsert snapshot for today
+
+                    v = session.exec(
+                        select(Video).where(
+                            Video.platform_id == c.platform_id,
+                            Video.external_video_id == vid_ext,
+                        )
+                    ).first()
+                    if not v:
+                        continue
+
                     session.exec(
                         sa.text(
-                            "DELETE FROM metricdaily WHERE channel_id = :cid AND video_id = :vid AND date = :d"
+                            "DELETE FROM video_daily_metrics WHERE video_id = :vid AND date = :d"
                         ),
-                        {"cid": c.id, "vid": vid, "d": today},
+                        {"vid": v.id, "d": today},
                     )
-                    session.add(MetricDaily(
-                        channel_id=c.id,
-                        video_id=vid,
+                    session.add(VideoDailyMetrics(
+                        video_id=v.id,
                         date=today,
                         views=views,
                         likes=likes,
@@ -688,61 +567,33 @@ async def sync_full(
     except Exception:
         pass
 
-    # Mark channel as synced now that full pass is done
+    # Mark channel as synced
     try:
         c.last_synced_at = dt.datetime.utcnow()
         session.add(c)
         session.commit()
     except Exception:
-        # non-fatal; proceed
         pass
 
-    # 3) Breakdowns (best-effort; ignore failures)
-    try:
-        brks = 0
-        for vid in video_ids:
-            for dim, metrics, key in [
-                ("insightTrafficSourceType", ["views","estimatedMinutesWatched","impressions","impressionsClickThroughRate"], "insightTrafficSourceType"),
-                ("deviceType", ["views","estimatedMinutesWatched"], "deviceType"),
-                ("country", ["views","estimatedMinutesWatched"], "country"),
-                ("ageGroup,gender", ["views","estimatedMinutesWatched"], "ageGroup"),
-            ]:
-                try:
-                    brks += await _ingest_breakdown(request, session, c, vid, token, start, end, dim, metrics, key)
-                except Exception:
-                    continue
-    except Exception:
-        pass
+    return {"ok": True, "videos": len(video_ids_external), "rows": inserted}
 
-    return {"ok": True, "videos": len(video_ids), "rows": inserted}
-
-
+# ----------------------------
+# Auto sync (8-hour cadence)
+# ----------------------------
 @router.post("/sync/auto")
 async def sync_auto(
     request: Request,
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
-    """
-    For each channel: if never synced or last sync > 8 hours ago, run a full sync (last 180 days).
-    """
-    # Reset manual refresh counter daily
-    try:
-        u = session.get(User, user_id)
-        if u:
-            today = dt.date.today()
-            if getattr(u, "manual_refresh_date", None) != today:
-                u.manual_refresh_date = today
-                u.manual_refresh_count = 0
-                session.add(u)
-                session.commit()
-    except Exception:
-        pass
-
-    channels = session.exec(select(Channel).where(Channel.user_id == user_id, Channel.active == True)).all()
+    chans = session.exec(
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Channel.is_active == True)
+    ).all()
     ran = 0
     errors: list[dict] = []
-    for c in channels:
+    for c in chans:
         if not c.last_synced_at or (dt.datetime.utcnow() - c.last_synced_at).total_seconds() > 8 * 3600:
             try:
                 await sync_full(channel_id=c.id, days=180, request=request, user_id=user_id, session=session)  # type: ignore
@@ -750,44 +601,31 @@ async def sync_auto(
             except Exception as e:
                 errors.append({"channel_id": c.id, "error": str(e)})
                 continue
-    return {"ok": True, "synced": ran, "total": len(channels), "errors": errors}
+    return {"ok": True, "synced": ran, "total": len(chans), "errors": errors}
 
-
+# ----------------------------
+# Manual sync (no legacy daily limits)
+# ----------------------------
 @router.post("/sync/manual")
 async def sync_manual(
     request: Request,
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
-    """
-    Force refresh across all channels, limited to 3 times per day per user.
-    """
-    u = session.get(User, user_id)
-    if not u:
-        raise HTTPException(status_code=404, detail="user not found")
-    today = dt.date.today()
-    if u.manual_refresh_date != today:
-        u.manual_refresh_date = today
-        u.manual_refresh_count = 0
-    if u.manual_refresh_count >= 3:
-        raise HTTPException(status_code=429, detail="manual refresh limit reached for today")
-
-    u.manual_refresh_count += 1
-    session.add(u)
-    session.commit()
-
-    channels = session.exec(select(Channel).where(Channel.user_id == user_id, Channel.active == True)).all()
+    chans = session.exec(
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Channel.is_active == True)
+    ).all()
     errs: list[dict] = []
     ok_count = 0
-    for c in channels:
+    for c in chans:
         try:
             await sync_full(channel_id=c.id, days=180, request=request, user_id=user_id, session=session)  # type: ignore
             ok_count += 1
         except Exception as e:
             errs.append({"channel_id": c.id, "error": str(e)})
-    remaining = 3 - u.manual_refresh_count
-    return {"ok": True, "refreshed_channels": ok_count, "remaining_today": max(0, remaining), "errors": errs}
-
+    return {"ok": True, "refreshed_channels": ok_count, "errors": errs}
 
 # ----------------------------
 # Aggregate per-video totals across all days
@@ -798,24 +636,25 @@ def videos_summary(
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
-    c = session.get(Channel, channel_id)
-    if not c or c.user_id != user_id:
+    c = _user_channel(session, user_id, channel_id)
+    if not c:
         raise HTTPException(status_code=404, detail="channel not found")
+
     stmt = sa.text(
         """
-        SELECT v.id as vm_id, v.yt_video_id, v.title, v.thumbnail_url,
+        SELECT v.id as video_id, v.external_video_id, v.title, v.thumbnail_url,
                SUM(m.views) as views,
-               SUM(m.watch_time_min) as watch_time_min,
-               SUM(COALESCE(m.subs_gained,0) - COALESCE(m.subs_lost,0)) as subs_net,
-               SUM(COALESCE(m.est_revenue_minor,0)) as revenue_minor,
+               SUM(m.watch_time_minutes) as watch_time_minutes,
+               SUM(COALESCE(m.subs_gained_from_video,0)) as subs_gained_from_video,
+               SUM(COALESCE(m.estimated_revenue,0)) as estimated_revenue,
                SUM(COALESCE(m.impressions,0)) as impressions,
-               AVG(COALESCE(m.impressions_ctr_pct,0)) as ctr_pct,
-               AVG(COALESCE(m.avg_view_duration_sec,0)) as avg_view_duration_sec,
-               AVG(COALESCE(m.avg_pct_viewed,0)) as avg_pct_viewed
-        FROM videomap v
-        LEFT JOIN metricdaily m ON m.channel_id = v.channel_id AND m.video_id = v.yt_video_id
-        WHERE v.channel_id = :cid
-        GROUP BY v.id, v.yt_video_id, v.title, v.thumbnail_url
+               AVG(COALESCE(m.click_through_rate,0)) as click_through_rate,
+               AVG(COALESCE(m.avg_view_duration_seconds,0)) as avg_view_duration_seconds,
+               AVG(COALESCE(m.avg_percent_viewed,0)) as avg_percent_viewed
+        FROM video v
+        LEFT JOIN video_daily_metrics m ON m.video_id = v.id
+        WHERE v.channel_id = :cid AND v.is_active = 1
+        GROUP BY v.id, v.external_video_id, v.title, v.thumbnail_url
         ORDER BY views DESC
         """
     ).bindparams(sa.bindparam("cid", value=c.id))
@@ -823,9 +662,8 @@ def videos_summary(
     rows = [dict(r._mapping) for r in q]
     return {"ok": True, "videos": rows}
 
-
 # ----------------------------
-# Time series for charts
+# Time series for charts (channel)
 # ----------------------------
 @router.get("/channel/timeseries")
 def channel_timeseries(
@@ -837,46 +675,49 @@ def channel_timeseries(
 ):
     end = dt.date.today()
     start = end - dt.timedelta(days=max(1, days) - 1)
+
     if all:
-        chan_ids = [c.id for c in session.exec(select(Channel.id).where(Channel.user_id == user_id, Channel.active == True)).all()]
+        chan_ids = [
+            cid for (cid,) in session.exec(
+                select(Channel.id)
+                .join(UserChannel, UserChannel.channel_id == Channel.id)
+                .where(UserChannel.user_id == user_id, Channel.is_active == True)
+            ).all()
+        ]
         if not chan_ids:
             return {"ok": True, "series": []}
+        placeholders = ",".join([f":id{i}" for i in range(len(chan_ids))])
         stmt = sa.text(
-            """
-            SELECT date, SUM(views) as views, SUM(watch_time_min) as watch_time_min
-            FROM metricdaily
-            WHERE channel_id IN (:ids) AND date BETWEEN :start AND :end
+            f"""
+            SELECT date, SUM(views) as views, SUM(watch_time_minutes) as watch_time_minutes
+            FROM channel_daily_metrics
+            WHERE channel_id IN ({placeholders}) AND date BETWEEN :start AND :end
             GROUP BY date
             ORDER BY date
             """
-        )
-        # SQLite doesn't support IN (:ids) with array bind in text; build dynamic
-        placeholders = ",".join([f":id{i}" for i in range(len(chan_ids))])
-        stmt = sa.text(
-            f"SELECT date, SUM(views) as views, SUM(watch_time_min) as watch_time_min "
-            f"FROM metricdaily WHERE channel_id IN ({placeholders}) AND date BETWEEN :start AND :end "
-            f"GROUP BY date ORDER BY date"
         ).bindparams(**{f"id{i}": cid for i, cid in enumerate(chan_ids)}, start=start, end=end)
         rows = session.exec(stmt).all()
     else:
         if channel_id is None:
             raise HTTPException(status_code=400, detail="channel_id required when all=false")
-        c = session.get(Channel, channel_id)
-        if not c or c.user_id != user_id:
+        c = _user_channel(session, user_id, channel_id)
+        if not c:
             raise HTTPException(status_code=404, detail="channel not found")
         stmt = sa.text(
             """
-            SELECT date, SUM(views) as views, SUM(watch_time_min) as watch_time_min
-            FROM metricdaily
+            SELECT date, views, watch_time_minutes
+            FROM channel_daily_metrics
             WHERE channel_id = :cid AND date BETWEEN :start AND :end
-            GROUP BY date
             ORDER BY date
             """
         ).bindparams(cid=c.id, start=start, end=end)
         rows = session.exec(stmt).all()
+
     return {"ok": True, "series": [dict(r._mapping) for r in rows]}
 
-
+# ----------------------------
+# Time series for charts (video)
+# ----------------------------
 @router.get("/video/timeseries")
 def video_timeseries(
     channel_id: int,
@@ -885,18 +726,70 @@ def video_timeseries(
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
-    c = session.get(Channel, channel_id)
-    if not c or c.user_id != user_id:
+    c = _user_channel(session, user_id, channel_id)
+    if not c:
         raise HTTPException(status_code=404, detail="channel not found")
+
+    v = session.exec(
+        select(Video).where(
+            Video.channel_id == c.id,
+            Video.external_video_id == yt_video_id,
+        )
+    ).first()
+    if not v:
+        raise HTTPException(status_code=404, detail="video not found")
+
     end = dt.date.today()
     start = end - dt.timedelta(days=max(1, days) - 1)
     stmt = sa.text(
         """
-        SELECT date, views, watch_time_min, impressions, impressions_ctr_pct, avg_view_duration_sec, avg_pct_viewed
-        FROM metricdaily
-        WHERE channel_id = :cid AND video_id = :vid AND date BETWEEN :start AND :end
+        SELECT date, views, watch_time_minutes, impressions, click_through_rate,
+               avg_view_duration_seconds, avg_percent_viewed, likes, comments, shares,
+               subs_gained_from_video, estimated_revenue
+        FROM video_daily_metrics
+        WHERE video_id = :vid AND date BETWEEN :start AND :end
         ORDER BY date
         """
-    ).bindparams(cid=c.id, vid=yt_video_id, start=start, end=end)
+    ).bindparams(vid=v.id, start=start, end=end)
     rows = session.exec(stmt).all()
     return {"ok": True, "series": [dict(r._mapping) for r in rows]}
+
+# ----------------------------
+# Debug (legacy path): googleaccount status (mapped to new schema)
+# ----------------------------
+@router.get("/debug/googleaccount")
+def debug_googleaccount(
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """
+    Legacy debug endpoint preserved. Reports new-schema fields.
+    """
+    yt = session.exec(select(Platform).where(Platform.name == "youtube")).first()
+    if not yt:
+        raise HTTPException(status_code=404, detail="no youtube platform")
+
+    pa = session.exec(
+        select(PlatformAccount).where(
+            PlatformAccount.platform_id == yt.id, PlatformAccount.owner_user_id == user_id
+        )
+    ).first()
+    if not pa:
+        raise HTTPException(status_code=404, detail="no platform account")
+
+    cred = session.exec(
+        select(OAuthCredential).where(OAuthCredential.platform_account_id == pa.id)
+    ).first()
+
+    return {
+        "ok": True,
+        "user_id": user_id,
+        # legacy key kept for compatibility:
+        "google_account_id": None,
+        # new fields:
+        "platform_account_id": pa.id,
+        "has_access_token": bool(getattr(cred, "access_token_encrypted", None)) if cred else False,
+        "has_refresh_token": bool(getattr(cred, "refresh_token_encrypted", None)) if cred else False,
+        "expires_at": str(getattr(cred, "expires_at", None)) if cred else None,
+        "created_at": str(getattr(pa, "created_at", None)) if getattr(pa, "created_at", None) else None,
+    }

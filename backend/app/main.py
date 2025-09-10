@@ -2,7 +2,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from sqlmodel import text
+#from sqlmodel import text
+from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 
 from .db.core import engine
@@ -124,11 +125,16 @@ def debug_oauth_config():
         "cookie_samesite": getattr(settings, "session_same_site", "lax"),
     }
 
-# --- Serve UI files under /ui (from repo root) ---
+# --- Serve UI files under /ui (safe) ---
+# Avoid serving the entire backend directory (which can expose .env).
+# Mount a *build* directory if provided and only in dev.
 try:
-    here = os.path.dirname(__file__)
-    ui_dir = os.path.abspath(os.path.join(here, "..", "..", ""))
-    if os.path.isdir(ui_dir):
-        app.mount("/ui", StaticFiles(directory=ui_dir, html=True), name="ui")
+    FRONTEND_BUILD = (
+        getattr(settings, "frontend_build_dir", None)
+        or os.environ.get("FRONTEND_BUILD_DIR")
+        or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+    )
+    if env_name in {"dev", "development"} and FRONTEND_BUILD and os.path.isdir(FRONTEND_BUILD):
+        app.mount("/ui", StaticFiles(directory=FRONTEND_BUILD, html=True), name="ui")
 except Exception:
     pass

@@ -13,7 +13,6 @@ from sqlalchemy import (
     ForeignKey,
     text,
 )
-from sqlalchemy import Enum as SAEnum  # portable Enum
 from sqlalchemy.types import BigInteger, JSON
 from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, JSONB, VARCHAR, CHAR
 
@@ -63,28 +62,18 @@ class Platform(SQLModel, table=True):
     __tablename__ = "platform"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    # Add new values via migrations when you expand
-    name: str = Field(
-        sa_column=Column(
-            SAEnum(
-                "youtube",
-                "tiktok",
-                "instagram",
-                "x",
-                "facebook",
-                "twitch",
-                name="platform_name_enum",
-                native_enum=IS_POSTGRES,
-            ),
-            nullable=False,
-        )
-    )
+    # DB enforces allowed values via triggers; use VARCHAR(9) to match DDL
+    name: str = Field(sa_column=Column(VARCHAR(9), nullable=False))
     created_at: dt.datetime = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),
             nullable=False,
             server_default=text("CURRENT_TIMESTAMP"),
         )
+    )
+
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_platform_name"),
     )
 
 
@@ -102,7 +91,6 @@ class PlatformAccount(SQLModel, table=True):
             index=True,
         )
     )
-    # The app user who connected this account (others may still be granted access to channels)
     owner_user_id: int = Field(
         sa_column=Column(
             ForeignKey("user.id", ondelete="CASCADE"),
@@ -132,7 +120,6 @@ class OAuthCredential(SQLModel, table=True):
             index=True,
         )
     )
-    # Store encrypted at rest (handled in app layer / KMS)
     access_token_encrypted: str = Field(nullable=False)
     refresh_token_encrypted: Optional[str] = None
     scopes: Optional[str] = Field(sa_column=Column(VARCHAR(1024)))
@@ -166,12 +153,12 @@ class Channel(SQLModel, table=True):
         )
     )
 
-    external_channel_id: str = Field(nullable=False)  # e.g., YouTube channelId
+    external_channel_id: str = Field(nullable=False)
 
     title: Optional[str] = None
     description: Optional[str] = None
-    country: Optional[str] = Field(default=None, sa_column=Column(CHAR(2)))  # ISO-3166-1
-    language: Optional[str] = Field(default=None, sa_column=Column(CHAR(2)))  # ISO-639-1
+    country: Optional[str] = Field(default=None, sa_column=Column(CHAR(2)))
+    language: Optional[str] = Field(default=None, sa_column=Column(CHAR(2)))
     custom_url: Optional[str] = None
     avatar_url: Optional[str] = None
     banner_url: Optional[str] = None
@@ -235,13 +222,8 @@ class UserChannel(SQLModel, table=True):
             index=True,
         )
     )
-    role: str = Field(
-        sa_column=Column(
-            SAEnum("owner", "editor", "viewer", name="channel_role_enum", native_enum=IS_POSTGRES),
-            nullable=False,
-            server_default="viewer",
-        )
-    )
+    # DB validates via trigger; match DDL width
+    role: str = Field(sa_column=Column(VARCHAR(6), nullable=False, server_default="viewer"))
     created_at: dt.datetime = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),
@@ -267,29 +249,19 @@ class Video(SQLModel, table=True):
     channel_id: int = Field(
         sa_column=Column(ForeignKey("channel.id", ondelete="CASCADE"), nullable=False)
     )
-
-    # platform-scoped unique
     external_video_id: str = Field(nullable=False)
 
     title: Optional[str] = None
     description: Optional[str] = None
     category: Optional[str] = None
-    privacy_status: Optional[str] = Field(
-        sa_column=Column(
-            SAEnum("public", "unlisted", "private", name="privacy_enum", native_enum=IS_POSTGRES)
-        )
-    )
-    content_type: Optional[str] = Field(
-        sa_column=Column(
-            SAEnum("video", "short", "reel", "live", "post", name="content_type_enum", native_enum=IS_POSTGRES)
-        )
-    )
+    # Triggers enforce allowed values; lengths match DDL
+    privacy_status: Optional[str] = Field(sa_column=Column(VARCHAR(8)))
+    content_type: Optional[str] = Field(sa_column=Column(VARCHAR(5)))
     duration_seconds: Optional[int] = Field(sa_column=Column(BigInteger))
     published_at: Optional[dt.datetime] = Field(
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     thumbnail_url: Optional[str] = None
-    # array-of-strings or map; flexible & indexable with GIN (PG only)
     tags: Optional[dict] = Field(default=None, sa_column=Column(JSONType))
 
     last_synced_at: Optional[dt.datetime] = Field(
@@ -327,8 +299,6 @@ class Video(SQLModel, table=True):
 
 # ===========================================================
 #                  DAILY ROLLUPS (per-day)
-#   Natural composite PKs for safe upserts.
-#   Counts are BIGINT; money is NUMERIC with currency code.
 # ===========================================================
 class ChannelDailyMetrics(SQLModel, table=True):
     __tablename__ = "channel_daily_metrics"
@@ -348,11 +318,12 @@ class ChannelDailyMetrics(SQLModel, table=True):
     views: Optional[int] = Field(sa_column=Column(BigInteger))
     watch_time_minutes: Optional[int] = Field(sa_column=Column(BigInteger))
     impressions: Optional[int] = Field(sa_column=Column(BigInteger))
-    click_through_rate: Optional[float] = Field(sa_column=Column(NUMERIC(5, 2)))  # percent (e.g., 4.37)
+    click_through_rate: Optional[float] = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
     estimated_revenue: Optional[float] = Field(sa_column=Column(NUMERIC(12, 4)))
-    revenue_currency: Optional[str] = Field(default="USD", sa_column=Column(CHAR(3)))
+    revenue_currency: Optional[str] = Field(default=None, sa_column=Column(CHAR(3)))
 
     __table_args__ = (
+        Index("ix_cdm_channel_date", "channel_id", "date"),
         CheckConstraint("subscribers_total >= 0", name="ck_cdm_subs_total_nonneg"),
         CheckConstraint("subscribers_gained >= 0", name="ck_cdm_subs_gained_nonneg"),
         CheckConstraint("subscribers_lost >= 0", name="ck_cdm_subs_lost_nonneg"),
@@ -387,9 +358,10 @@ class VideoDailyMetrics(SQLModel, table=True):
     click_through_rate: Optional[float] = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
     subs_gained_from_video: Optional[int] = Field(sa_column=Column(BigInteger))
     estimated_revenue: Optional[float] = Field(sa_column=Column(NUMERIC(12, 4)))
-    revenue_currency: Optional[str] = Field(default="USD", sa_column=Column(CHAR(3)))
+    revenue_currency: Optional[str] = Field(default=None, sa_column=Column(CHAR(3)))
 
     __table_args__ = (
+        Index("ix_vdm_video_date", "video_id", "date"),
         CheckConstraint("views >= 0", name="ck_vdm_views_nonneg"),
         CheckConstraint("watch_time_minutes >= 0", name="ck_vdm_wtm_nonneg"),
         CheckConstraint("avg_view_duration_seconds >= 0", name="ck_vdm_avd_nonneg"),
@@ -417,7 +389,6 @@ class ChannelHourlyMetrics(SQLModel, table=True):
             nullable=False,
         )
     )
-    # IMPORTANT: only set primary_key in sa_column for composite PKs
     hour_start: dt.datetime = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),
@@ -462,7 +433,6 @@ class VideoHourlyMetrics(SQLModel, table=True):
             nullable=False,
         )
     )
-    # IMPORTANT: only set primary_key in sa_column for composite PKs
     hour_start: dt.datetime = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),

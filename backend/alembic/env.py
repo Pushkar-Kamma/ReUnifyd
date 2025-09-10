@@ -17,6 +17,22 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from app.db import models  # noqa: F401  (side-effect: registers tables on metadata)
 
 # -------------------------------------------------------------
+# SQLite URL normalization (align with app.db.core)
+# -------------------------------------------------------------
+def _normalize_sqlite_url(url: str) -> str:
+    """Ensure relative SQLite URLs resolve to backend/ so paths are consistent
+    whether Alembic runs from repo root or backend/."""
+    if not url.startswith("sqlite"):
+        return url
+    prefix = "sqlite:///./"
+    if url.startswith(prefix):
+        name = url[len(prefix):]
+        backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        db_path = os.path.join(backend_dir, name).replace("\\", "/")
+        return f"sqlite:///{db_path}"
+    return url
+
+# -------------------------------------------------------------
 # Alembic Config object, provides access to .ini values
 # -------------------------------------------------------------
 config = context.config
@@ -31,8 +47,9 @@ if config.config_file_name is not None:
 db_url = (
     os.getenv("DATABASE_URL")
     or config.get_main_option("sqlalchemy.url")
-    or "sqlite:///dev.db"
+    or "sqlite:///./dev.db"  # <-- use ./ to anchor relative path
 )
+db_url = _normalize_sqlite_url(db_url)
 
 # Ensure Alembic uses the resolved URL (env var wins)
 config.set_main_option("sqlalchemy.url", db_url)
@@ -95,3 +112,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
