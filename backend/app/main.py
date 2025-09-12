@@ -126,15 +126,34 @@ def debug_oauth_config():
     }
 
 # --- Serve UI files under /ui (safe) ---
-# Avoid serving the entire backend directory (which can expose .env).
-# Mount a *build* directory if provided and only in dev.
+# --- Serve UI files under /ui ---
 try:
-    FRONTEND_BUILD = (
-        getattr(settings, "frontend_build_dir", None)
-        or os.environ.get("FRONTEND_BUILD_DIR")
-        or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+    from pathlib import Path
+    here = Path(__file__).resolve()
+
+    # 1) Allow explicit override via env or settings
+    ui_dir = (
+        os.environ.get("FRONTEND_BUILD_DIR")
+        or getattr(settings, "frontend_build_dir", None)
     )
-    if env_name in {"dev", "development"} and FRONTEND_BUILD and os.path.isdir(FRONTEND_BUILD):
-        app.mount("/ui", StaticFiles(directory=FRONTEND_BUILD, html=True), name="ui")
-except Exception:
-    pass
+
+    # 2) Fallbacks (pick the first existing path)
+    if not ui_dir:
+        candidates = [
+            here.parents[2],                          # repo root: .../YT Dashboard
+            here.parents[2] / "ui",                   # repo/ui
+            here.parents[2] / "frontend",             # repo/frontend
+            here.parents[2] / "frontend" / "dist",    # repo/frontend/dist
+        ]
+        for p in candidates:
+            if p.is_dir():
+                ui_dir = str(p)
+                break
+
+    if env_name in {"dev", "development"} and ui_dir and os.path.isdir(ui_dir):
+        print(f"[static] Serving /ui from: {ui_dir}")
+        app.mount("/ui", StaticFiles(directory=ui_dir, html=True), name="ui")
+    else:
+        print(f"[static] No UI dir mounted (env={env_name}, ui_dir={ui_dir!r})")
+except Exception as e:
+    print(f"[static] Failed to mount /ui: {e}")
