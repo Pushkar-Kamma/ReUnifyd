@@ -1,7 +1,7 @@
-# app/services/youtube_client.py
+# backend/app/services/youtube_client.py
 from __future__ import annotations
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone, timedelta
 
 from sqlmodel import Session  # typing clarity
@@ -26,7 +26,6 @@ _SCOPES = [
 # Refresh a little early to avoid handing out near-expiry tokens
 _EXPIRY_SKEW = timedelta(seconds=90)
 
-
 def _decrypt_access_token(cred: OAuthCredential) -> Optional[str]:
     enc = getattr(cred, "access_token_encrypted", None)
     if not enc:
@@ -35,7 +34,6 @@ def _decrypt_access_token(cred: OAuthCredential) -> Optional[str]:
         return decrypt_str(enc)
     except Exception:
         return None
-
 
 def _decrypt_refresh_token(cred: OAuthCredential) -> Optional[str]:
     enc = getattr(cred, "refresh_token_encrypted", None)
@@ -46,10 +44,8 @@ def _decrypt_refresh_token(cred: OAuthCredential) -> Optional[str]:
     except Exception:
         return None
 
-
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
-
 
 def _as_tzaware_utc(dt_val: Optional[datetime]) -> Optional[datetime]:
     """Make a datetime UTC-aware; interpret naive as UTC."""
@@ -59,14 +55,12 @@ def _as_tzaware_utc(dt_val: Optional[datetime]) -> Optional[datetime]:
         return dt_val.replace(tzinfo=timezone.utc)
     return dt_val.astimezone(timezone.utc)
 
-
 def _to_db_naive_utc(dt_val: Optional[datetime]) -> Optional[datetime]:
     """Store as naive UTC for SQLite TIMESTAMP compatibility."""
     if not dt_val:
         return None
     aware = _as_tzaware_utc(dt_val)
     return aware.replace(tzinfo=None)
-
 
 def _should_refresh(creds: Credentials) -> bool:
     # If no token, clearly refresh
@@ -76,7 +70,6 @@ def _should_refresh(creds: Credentials) -> bool:
     if not getattr(creds, "expiry", None):
         return True
     return creds.expiry <= (_utcnow() + _EXPIRY_SKEW)
-
 
 def _build_youtube_service(session: Session, cred: OAuthCredential):
     """
@@ -125,15 +118,31 @@ def _build_youtube_service(session: Session, cred: OAuthCredential):
     service = build("youtube", "v3", credentials=creds, cache_discovery=False)
     return service
 
-
 def yt_channels_me(session: Session, cred: OAuthCredential) -> Dict[str, Any]:
-    """
-    Minimal example call: return the authorized channel’s basic info.
-    """
+    """Return metadata for channels owned by the credentialed Google account."""
     service = _build_youtube_service(session, cred)
-    resp = service.channels().list(
-        part="snippet,statistics,brandingSettings",
-        mine=True,
-        maxResults=1,
-    ).execute()
-    return resp
+    items: List[Dict[str, Any]] = []
+    page_token: Optional[str] = None
+    first: Dict[str, Any] | None = None
+
+    while True:
+        resp = service.channels().list(
+            part="snippet,statistics,brandingSettings,status",
+            mine=True,
+            maxResults=50,
+            pageToken=page_token,
+        ).execute()
+
+        if first is None:
+            first = resp
+        items.extend(resp.get("items", []))
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+
+    if first is None:
+        return {"items": []}
+
+    result = {k: v for k, v in first.items() if k not in {"items", "nextPageToken"}}
+    result["items"] = items
+    return result

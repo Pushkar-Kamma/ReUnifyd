@@ -136,6 +136,17 @@
     </style>
 </head>
 <body>
+    <script>
+        (async () => {
+          try {
+            const r = await fetch('/auth/connected');
+            if (!r.ok) location.href = '/ui/login.html';
+          } catch {
+            location.href = '/ui/login.html';
+          }
+        })();
+      </script>
+      
     <div class="plans-container">
         <!-- Basic Plan -->
         <div class="plan-card" data-plan="basic">

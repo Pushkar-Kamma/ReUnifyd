@@ -22,6 +22,7 @@ from ..db.models import (
     Channel,
     UserChannel,
 )
+from ..services.youtube_client import yt_channels_me
 from ..services.google_oauth import oauth
 from app.core.crypto import encrypt_str, decrypt_str  # Fernet helpers you kept
 from app.core.security import hash_password, verify_password
@@ -46,6 +47,94 @@ def _ensure_platform_account(session: Session, user: User, platform: Platform) -
     ).first()
     if not pa:
         pa = PlatformAccount(platform_id=platform.id, owner_user_id=user.id, display_name=user.name or user.email)
+        session.add(pa)
+        session.commit()
+        session.refresh(pa)
+    return pa
+
+
+def _normalize_scopes(value) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [s for s in value.split() if s]
+    if isinstance(value, (list, tuple, set)):
+        return [str(s) for s in value if s]
+    return []
+
+def _parse_google_datetime(value: str | None) -> dt.datetime | None:
+    if not value:
+        return None
+    try:
+        return dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except Exception:
+        return None
+
+def _normalize_country_code(value: str | None) -> str | None:
+    if not value:
+        return None
+    return value.strip().upper()[:2]
+
+def _normalize_language_code(value: str | None) -> str | None:
+    if not value:
+        return None
+    return value.split('-', 1)[0].strip().lower()[:2]
+
+def _select_thumbnail(thumbnails) -> str | None:
+    if not thumbnails or not isinstance(thumbnails, dict):
+        return None
+    for key in ('high', 'medium', 'default'):
+        entry = thumbnails.get(key) or {}
+        if isinstance(entry, dict):
+            url = entry.get('url')
+            if url:
+                return url
+    for entry in thumbnails.values():
+        if isinstance(entry, dict):
+            url = entry.get('url')
+            if url:
+                return url
+    return None
+
+def _compute_expires_at(token: dict) -> dt.datetime | None:
+    if not token:
+        return None
+    expires_at = token.get('expires_at')
+    if expires_at:
+        try:
+            return dt.datetime.utcfromtimestamp(int(expires_at))
+        except Exception:
+            try:
+                return dt.datetime.fromisoformat(str(expires_at))
+            except Exception:
+                return None
+    expires_in = token.get('expires_in')
+    if expires_in:
+        try:
+            return dt.datetime.utcnow() + dt.timedelta(seconds=int(expires_in))
+        except Exception:
+            return None
+    return None
+
+def _get_or_create_platform_account(
+    session: Session,
+    user: User,
+    platform: Platform,
+    account_key: str,
+) -> PlatformAccount:
+    pa = session.exec(
+        select(PlatformAccount).where(
+            PlatformAccount.platform_id == platform.id,
+            PlatformAccount.owner_user_id == user.id,
+            PlatformAccount.display_name == account_key,
+        )
+    ).first()
+    if not pa:
+        pa = PlatformAccount(
+            platform_id=platform.id,
+            owner_user_id=user.id,
+            display_name=account_key,
+        )
         session.add(pa)
         session.commit()
         session.refresh(pa)
@@ -93,7 +182,7 @@ def _link_user_channel_owner(session: Session, user_id: int, channel_id: int) ->
     ).first()
     if not existing:
         session.add(UserChannel(user_id=user_id, channel_id=channel_id, role="owner"))
-        session.commit()
+        session.flush()
 
 # ---------- OAuth: init & callback ----------
 
@@ -102,6 +191,10 @@ async def google_init(request: Request, session: Session = Depends(get_session))
     # Remember where to return after linking
     next_url = request.query_params.get("next") or "/ui/link.html"
     request.session["post_oauth_next"] = next_url
+
+    plan = request.query_params.get("plan")
+    if plan and plan.lower() in {"basic", "creator", "pro"}:
+        request.session["post_oauth_plan"] = plan.lower()
 
     # (Optional) You previously enforced a user link quota here; new schema has no link_quota.
     # If you reintroduce quotas later, compute with a join on user_channel.
@@ -116,17 +209,14 @@ async def google_init(request: Request, session: Session = Depends(get_session))
 
 @router.get("/google/callback")
 async def google_callback(request: Request, session: Session = Depends(get_session)):
-    # If Google sent an error back (user canceled, etc.)
     if (err := request.query_params.get("error")):
-        return RedirectResponse(url=f"/?oauth_error={err}", status_code=307)
+        return RedirectResponse(url=f"/ui/link.html?oauth_error={err}", status_code=303)
 
-    # Exchange code for tokens
     try:
         token = await oauth.google.authorize_access_token(request)
-    except Exception as e:
-        return RedirectResponse(url=f"/ui/link.html?oauth_error={e}", status_code=307)
+    except Exception as exc:
+        return RedirectResponse(url=f"/ui/link.html?oauth_error={exc}", status_code=303)
 
-    # Parse userinfo
     userinfo = token.get("userinfo")
     if not userinfo:
         try:
@@ -134,18 +224,20 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
         except Exception:
             userinfo = None
     if not userinfo:
-        resp = await oauth.google.get(
-            "https://openidconnect.googleapis.com/v1/userinfo", token=token
-        )
         try:
+            resp = await oauth.google.get(
+                "https://openidconnect.googleapis.com/v1/userinfo", token=token
+            )
             userinfo = resp.json()
         except Exception:
             userinfo = None
 
-    email = ((userinfo or {}).get("email") or "").lower()
-    sub = (userinfo or {}).get("sub")
+    email = ((userinfo or {}).get("email") or "").lower() or None
+    sub = (userinfo or {}).get("sub") or None
+    account_key = email or (f"sub:{sub}" if sub else None)
+    if not account_key:
+        return JSONResponse({"detail": "unable to determine google account identity"}, status_code=400)
 
-    # Resolve current app user: prefer logged-in session, otherwise upsert by email
     user_id = request.session.get("user_id")
     user = session.get(User, user_id) if user_id else None
     if not user:
@@ -159,41 +251,18 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
             session.refresh(user)
         request.session["user_id"] = user.id
 
-    # Tokens
-    refresh_token = token.get("refresh_token")  # often only on first consent
+    refresh_token = token.get("refresh_token")
     access_token = token.get("access_token")
-    # Compute expires_at if possible
-    expires_at: Optional[dt.datetime] = None
-    if "expires_at" in token and token["expires_at"]:
-        try:
-            # some libs store as epoch seconds
-            expires_at = dt.datetime.utcfromtimestamp(int(token["expires_at"]))
-        except Exception:
-            expires_at = None
-    elif "expires_in" in token and token["expires_in"]:
-        try:
-            expires_at = dt.datetime.utcnow() + dt.timedelta(seconds=int(token["expires_in"]))
-        except Exception:
-            expires_at = None
+    expires_at = _compute_expires_at(token)
+    scopes_list = _normalize_scopes(token.get("scope"))
 
-    # Normalize scopes to a list
-    scopes_val = token.get("scope") or []
-    if isinstance(scopes_val, str):
-        scopes_list = [s for s in scopes_val.split() if s]
-    elif isinstance(scopes_val, (list, tuple)):
-        scopes_list = list(scopes_val)
-    else:
-        scopes_list = []
-
-    # Ensure platform + account + credential
     yt = _ensure_youtube_platform(session)
-    pa = _ensure_platform_account(session, user, yt)
+    pa = _get_or_create_platform_account(session, user, yt, account_key)
     try:
         cred = _upsert_oauth_credential(session, pa.id, access_token, refresh_token, scopes_list, expires_at)
-    except ValueError as e:
-        return JSONResponse({"detail": str(e)}, status_code=400)
+    except ValueError as exc:
+        return JSONResponse({"detail": str(exc)}, status_code=400)
 
-    # --- Discover channels and upsert into 'channel' + link via 'user_channel' ---
     header_access_token = access_token
     if not header_access_token and getattr(cred, "access_token_encrypted", None):
         try:
@@ -201,77 +270,106 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
         except Exception:
             header_access_token = None
 
+    items = []
     if header_access_token:
         try:
-            async with httpx.AsyncClient(timeout=20.0) as client:
-                resp = await client.get(
-                    "https://www.googleapis.com/youtube/v3/channels",
-                    params={"part": "snippet,contentDetails,statistics", "mine": "true"},
-                    headers={"Authorization": f"Bearer {header_access_token}"},
-                )
-            resp.raise_for_status()
-            data = resp.json()
-
-            for item in data.get("items", []):
-                ch_id = item.get("id")
-                snippet = item.get("snippet", {}) or {}
-                title = snippet.get("title")
-                published_at = snippet.get("publishedAt")
-                custom_url = snippet.get("customUrl")
-                country = snippet.get("country")
-                thumb = None
-                thumbs = snippet.get("thumbnails") or {}
-                for key in ("high", "medium", "default"):
-                    if key in thumbs and "url" in thumbs[key]:
-                        thumb = thumbs[key]["url"]
-                        break
-
-                # Upsert Channel by (platform_id, external_channel_id)
-                ch = session.exec(
-                    select(Channel).where(
-                        Channel.platform_id == yt.id,
-                        Channel.external_channel_id == ch_id,
-                    )
-                ).first()
-                if not ch:
-                    ch = Channel(
-                        platform_id=yt.id,
-                        platform_account_id=pa.id,
-                        external_channel_id=ch_id,
-                        title=title,
-                        description=snippet.get("description"),
-                        country=country,
-                        language=None,  # not provided by this API call
-                        custom_url=custom_url,
-                        avatar_url=thumb,
-                        banner_url=None,  # need brandingSettings part for banner
-                        is_monetized=None,  # not provided here
-                        published_at=published_at,
-                        last_synced_at=None,
-                        is_active=True,
-                    )
-                    session.add(ch)
-                    session.commit()
-                    session.refresh(ch)
-                else:
-                    # update mutable fields / re-link to latest platform account
-                    ch.platform_account_id = pa.id
-                    ch.title = title or ch.title
-                    ch.description = snippet.get("description") or ch.description
-                    ch.country = country or ch.country
-                    ch.custom_url = custom_url or ch.custom_url
-                    ch.avatar_url = thumb or ch.avatar_url
-                    ch.is_active = True
-                    session.add(ch)
-                    session.commit()
-
-                _link_user_channel_owner(session, user.id, ch.id)
+            yt_response = yt_channels_me(session, cred) or {}
+            items = yt_response.get("items") or []
         except Exception:
-            # Don't block login if discovery fails
-            pass
+            items = []
 
-    next_url = request.session.pop("post_oauth_next", None) or "/ui/dashboard.html?linked=1"
-    return RedirectResponse(url=next_url, status_code=307)
+    seen: set[str] = set()
+    now = dt.datetime.utcnow()
+    for item in items:
+        channel_id = item.get("id")
+        if not channel_id or channel_id in seen:
+            continue
+        seen.add(channel_id)
+
+        snippet = item.get("snippet") or {}
+        branding = item.get("brandingSettings") or {}
+        branding_channel = branding.get("channel") or {}
+        branding_image = branding.get("image") or {}
+        status = item.get("status") or {}
+
+        title = snippet.get("title") or branding_channel.get("title")
+        description = snippet.get("description")
+        country = _normalize_country_code(snippet.get("country"))
+        language = _normalize_language_code(
+            branding_channel.get("defaultLanguage") or snippet.get("defaultLanguage")
+        )
+        custom_url = snippet.get("customUrl") or branding_channel.get("customUrl")
+        avatar_url = _select_thumbnail(snippet.get("thumbnails"))
+        banner_url = branding_image.get("bannerExternalUrl")
+        published_at = _parse_google_datetime(snippet.get("publishedAt"))
+        is_monetized = status.get("isLinked")
+
+        ch = session.exec(
+            select(Channel).where(
+                Channel.platform_id == yt.id,
+                Channel.external_channel_id == channel_id,
+            )
+        ).first()
+
+        if not ch:
+            ch = Channel(
+                platform_id=yt.id,
+                platform_account_id=pa.id,
+                external_channel_id=channel_id,
+                title=title,
+                description=description,
+                country=country,
+                language=language,
+                custom_url=custom_url,
+                avatar_url=avatar_url,
+                banner_url=banner_url,
+                is_monetized=is_monetized,
+                is_active=True,
+                published_at=published_at,
+                last_synced_at=now,
+            )
+            session.add(ch)
+            session.flush()
+        else:
+            ch.platform_account_id = pa.id
+            ch.title = title or ch.title
+            ch.description = description or ch.description
+            ch.country = country or ch.country
+            ch.language = language or ch.language
+            ch.custom_url = custom_url or ch.custom_url
+            if published_at and not ch.published_at:
+                ch.published_at = published_at
+            if avatar_url:
+                ch.avatar_url = avatar_url
+            if banner_url:
+                ch.banner_url = banner_url
+            if is_monetized is not None:
+                ch.is_monetized = is_monetized
+            ch.is_active = True
+            ch.last_synced_at = now
+            session.add(ch)
+            session.flush()
+
+        _link_user_channel_owner(session, user.id, ch.id)
+
+    session.commit()
+
+    next_url = (
+        request.session.pop("post_oauth_next", None)
+        or request.query_params.get("next")
+        or "/ui/link.html"
+    )
+    plan = (
+        request.session.pop("post_oauth_plan", None)
+        or request.query_params.get("plan")
+    )
+    sep = "&" if "?" in next_url else "?"
+    params = []
+    if plan:
+        params.append(f"plan={plan}")
+    params.append("linked=1")
+    redirect_target = f"{next_url}{sep}{'&'.join(params)}"
+    return RedirectResponse(redirect_target, status_code=303)
 
 # ---------- misc ----------
 

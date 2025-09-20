@@ -11,6 +11,9 @@ from .core.settings import settings
 from .api.test_db import router as test_db_router
 from .api.youtube import router as youtube_router
 from .api.auth import router as auth_router
+from .api.auth_google import router as auth_google_router
+
+
 
 from .services.google_oauth import init_oauth
 import os
@@ -105,6 +108,7 @@ def db_ping():
 app.include_router(test_db_router)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(youtube_router, prefix="/youtube", tags=["youtube"])
+app.include_router(auth_google_router)
 
 # --- Root to avoid 404 after OAuth redirect ---
 @app.get("/")
@@ -157,3 +161,4 @@ try:
         print(f"[static] No UI dir mounted (env={env_name}, ui_dir={ui_dir!r})")
 except Exception as e:
     print(f"[static] Failed to mount /ui: {e}")
+

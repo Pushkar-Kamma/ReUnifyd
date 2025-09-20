@@ -233,31 +233,26 @@
     }
   </style>
 
-  <script>
-    // === Keep your exact signup() behavior and links ===
-    async function signup(ev){
-      ev.preventDefault();
-      const email = document.getElementById('email').value.trim();
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const r = await fetch('/auth/signup', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ email, username, password })
-      });
-      if(r.ok){
-        // Go to link page after creating the account
-        window.location.href = '/ui/link.html';
-        return;
-      }
-      const data = await r.json().catch(()=>({detail:'Signup failed'}));
-      alert(data.detail || 'Signup failed');
-    }
-
-    // Optional: render lucide icons if the script loaded
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.lucide && lucide.createIcons) lucide.createIcons();
+<script>
+  async function signup(ev){
+    ev.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const r = await fetch('/auth/signup', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, username, password })
     });
-  </script>
+    if(r.ok){
+      // 🚀 After signup, go choose a plan
+      window.location.href = '/ui/plans.html';
+      return;
+    }
+    const data = await r.json().catch(()=>({detail:'Signup failed'}));
+    alert(data.detail || 'Signup failed');
+  }
+</script>
+
 </head>
 <body>
   <!-- Header (link preserved to /ui/login.html) -->

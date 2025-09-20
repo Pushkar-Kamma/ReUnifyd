@@ -99,8 +99,8 @@
       const u = new URL(window.location.href);
       const q = (u.searchParams.get('plan') || '').toLowerCase();
       if (['basic','creator','pro'].includes(q)) return q;
-      const mem = (sessionStorage.getItem('reunifyd_plan') || '').toLowerCase();
-      if (['basic','creator','pro'].includes(mem)) return mem;
+      const remembered = (sessionStorage.getItem('reunifyd_plan') || '').toLowerCase();
+      if (['basic','creator','pro'].includes(remembered)) return remembered;
       return 'basic';
     }
 
@@ -125,13 +125,12 @@
       host.innerHTML = '';
 
       if (!channels.length){
-        // Optional placeholder card when empty
         const empty = document.createElement('div');
         empty.className = 'slot';
         empty.innerHTML = `
           <div class="thumbbox"></div>
           <div class="title">No channels linked yet</div>
-          <div class="meta">Use “Connect Google” to add your first channel.</div>`;
+          <div class="meta">Use "Connect Google" to add your first channel.</div>`;
         host.appendChild(empty);
         return;
       }
@@ -139,74 +138,115 @@
       channels.forEach((c, idx)=>{
         const card = document.createElement('div');
         card.className = 'slot';
-        const thumbBig = c.banner_url
-          ? `<img src="${c.banner_url}" class="thumbbox" style="object-fit:cover;border-radius:10px">`
-          : `<div class="thumbbox"></div>`;
-        const thumbSmall = c.thumbnail_url
-          ? `<img src="${c.thumbnail_url}" class="thumb" alt="">`
-          : `<div class="thumb">YT</div>`;
-        const subs = (typeof c.subscriber_count === 'number') ? c.subscriber_count.toLocaleString() : '—';
+
+        const bannerSrc = c.banner_url || null;
+        const thumbSrc = c.thumbnail_url || c.avatar_url || null;
+        const fallbackLetters = (c.title || 'YT').slice(0, 2).toUpperCase();
+
+        const thumbBig = bannerSrc
+          ? `<img src="${bannerSrc}" class="thumbbox" style="object-fit:cover;border-radius:10px">`
+          : thumbSrc
+            ? `<img src="${thumbSrc}" class="thumbbox" style="object-fit:cover;border-radius:10px">`
+            : `<div class="thumbbox"></div>`;
+
+        const thumbSmall = thumbSrc
+          ? `<img src="${thumbSrc}" class="thumb" alt="">`
+          : `<div class="thumb">${fallbackLetters}</div>`;
+
+        const metaBits = [];
+        if (c.custom_url) metaBits.push(c.custom_url);
+        else if (c.external_channel_id) metaBits.push(c.external_channel_id);
+        if (c.last_synced_at){
+          try {
+            const dt = new Date(c.last_synced_at);
+            if (!Number.isNaN(dt.getTime())){
+              metaBits.push(`Synced ${dt.toLocaleDateString()}`);
+            }
+          } catch (_) {}
+        }
 
         card.innerHTML = `
           ${thumbBig}
           <div class="ch-row">
             ${thumbSmall}
             <div>
-              <div class="title">${c.title || 'Channel ' + (idx+1)}</div>
-              <div class="meta">Subs: ${subs}</div>
+              <div class="title">${c.title || 'Channel ' + (idx + 1)}</div>
+              <div class="meta">${metaBits.join(' | ') || ''}</div>
             </div>
           </div>`;
         host.appendChild(card);
       });
     }
 
-    // OAuth flow — use the simple working pattern from your older file
     function connectGoogle(){
-      // Keep plan in session so we can restore after OAuth
       sessionStorage.setItem('reunifyd_plan', plan);
-      // Navigate to backend OAuth; backend should redirect back to /ui/link.html after success
-      window.location.href = `/auth/google/init?next=/ui/link.html`;
+      const u = new URL('/auth/google/init', window.location.origin);
+      u.searchParams.set('next', '/ui/link.html');
+      u.searchParams.set('plan', plan);
+      window.location.href = u.toString();
     }
 
     async function ensureAuth(){
       const r = await fetch('/auth/connected');
-      if(!r.ok){ window.location.href = '/ui/login.html'; }
+      if(!r.ok){
+        window.location.href = '/ui/login.html';
+      }
     }
 
     async function loadChannels(){
       try{
-        const r = await fetch('/youtube/channels');
+        const r = await fetch('/youtube/channels', { cache: 'no-cache' });
         if(!r.ok) return [];
         const data = await r.json();
-        return data.channels || [];
-      }catch{ return []; }
+        const raw = Array.isArray(data.channels) ? data.channels : [];
+        const uniq = [];
+        const seen = new Set();
+        for (const entry of raw){
+          if (!entry || typeof entry !== 'object') continue;
+          const key = entry.id ?? `${entry.external_channel_id || 'channel'}-${entry.platform_account_id ?? ''}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          uniq.push({
+            ...entry,
+            thumbnail_url: entry.thumbnail_url || entry.avatar_url || null,
+          });
+        }
+        uniq.sort((a, b)=> (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));
+        return uniq;
+      }catch(err){
+        console.error('loadChannels failed', err);
+        return [];
+      }
     }
 
     async function bootstrap(){
       await ensureAuth();
 
-      // Plan from URL/session
       setPlan(planFromUrlOrSession());
 
-      // Load channels and draw UI
       channels = await loadChannels();
       renderChannelCards();
       updateEstimate();
 
-      // If we just returned from OAuth, quietly clear the flag in URL (no alert)
       const url = new URL(window.location.href);
       if (url.searchParams.get('linked')){
+        const qPlan = (url.searchParams.get('plan') || '').toLowerCase();
+        if (['basic','creator','pro'].includes(qPlan)){
+          setPlan(qPlan);
+        }
+        channels = await loadChannels();
+        renderChannelCards();
+        updateEstimate();
         url.searchParams.delete('linked');
-        history.replaceState({}, '', url.pathname + url.search);
+        const search = url.searchParams.toString();
+        history.replaceState({}, '', search ? `${url.pathname}?${search}` : url.pathname);
       }
 
-      // Wire up the connect button
       $('connectBtn').addEventListener('click', (e)=>{
-        e.preventDefault(); // ensure no accidental submit/refresh
+        e.preventDefault();
         connectGoogle();
       });
 
-      // Optional: accept plan via postMessage too
       window.addEventListener('message', (evt)=>{
         if (evt?.data?.type === 'reunifyd:setPlan' && evt.data.plan){
           setPlan(String(evt.data.plan).toLowerCase());

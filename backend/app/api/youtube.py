@@ -139,6 +139,15 @@ def list_channels(
                 "external_channel_id": c.external_channel_id,
                 "title": c.title,
                 "avatar_url": c.avatar_url,
+                "thumbnail_url": c.avatar_url,
+                "banner_url": c.banner_url,
+                "custom_url": c.custom_url,
+                "description": c.description,
+                "country": c.country,
+                "language": c.language,
+                "platform_account_id": c.platform_account_id,
+                "is_active": c.is_active,
+                "published_at": c.published_at,
                 "last_synced_at": c.last_synced_at,
             }
             for c in chans
