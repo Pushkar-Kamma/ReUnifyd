@@ -153,6 +153,10 @@
           ? `<img src="${thumbSrc}" class="thumb" alt="">`
           : `<div class="thumb">${fallbackLetters}</div>`;
 
+        const subscriberValue = typeof c.subscriber_count === 'number'
+          ? c.subscriber_count
+          : Number.parseInt(c.subscriber_count ?? '', 10);
+        const subs = Number.isFinite(subscriberValue) ? subscriberValue.toLocaleString() : 'N/A';
         const metaBits = [];
         if (c.custom_url) metaBits.push(c.custom_url);
         else if (c.external_channel_id) metaBits.push(c.external_channel_id);
@@ -165,13 +169,16 @@
           } catch (_) {}
         }
 
+        const metaLine = metaBits.join(' | ');
+
         card.innerHTML = `
           ${thumbBig}
           <div class="ch-row">
             ${thumbSmall}
             <div>
               <div class="title">${c.title || 'Channel ' + (idx + 1)}</div>
-              <div class="meta">${metaBits.join(' | ') || ''}</div>
+              <div class="meta">Subs: ${subs}</div>
+              ${metaLine ? `<div class=\"meta\">${metaLine}</div>` : ''}
             </div>
           </div>`;
         host.appendChild(card);
@@ -206,9 +213,15 @@
           const key = entry.id ?? `${entry.external_channel_id || 'channel'}-${entry.platform_account_id ?? ''}`;
           if (seen.has(key)) continue;
           seen.add(key);
+          let subscriberCount = null;
+          if (entry.subscriber_count !== undefined && entry.subscriber_count !== null){
+            const parsed = Number.parseInt(entry.subscriber_count, 10);
+            if (!Number.isNaN(parsed)) subscriberCount = parsed;
+          }
           uniq.push({
             ...entry,
             thumbnail_url: entry.thumbnail_url || entry.avatar_url || null,
+            subscriber_count: subscriberCount,
           });
         }
         uniq.sort((a, b)=> (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' }));

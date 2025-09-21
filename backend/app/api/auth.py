@@ -22,7 +22,6 @@ from ..db.models import (
     Channel,
     UserChannel,
 )
-from ..services.youtube_client import yt_channels_me
 from ..services.google_oauth import oauth
 from app.core.crypto import encrypt_str, decrypt_str  # Fernet helpers you kept
 from app.core.security import hash_password, verify_password
@@ -270,11 +269,26 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
         except Exception:
             header_access_token = None
 
-    items = []
+    async def _fetch_youtube_channels(token: str) -> list[dict]:
+        params = {
+            "part": "snippet,contentDetails,statistics,brandingSettings",
+            "mine": "true",
+            "maxResults": 50,
+        }
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.get(
+                "https://www.googleapis.com/youtube/v3/channels",
+                params=params,
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("items", [])
+
+    items: list[dict] = []
     if header_access_token:
         try:
-            yt_response = yt_channels_me(session, cred) or {}
-            items = yt_response.get("items") or []
+            items = await _fetch_youtube_channels(header_access_token)
         except Exception:
             items = []
 
@@ -291,6 +305,13 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
         branding_channel = branding.get("channel") or {}
         branding_image = branding.get("image") or {}
         status = item.get("status") or {}
+        statistics = item.get("statistics") or {}
+        subscriber_count = None
+        try:
+            if statistics.get("subscriberCount") is not None:
+                subscriber_count = int(statistics.get("subscriberCount"))
+        except (TypeError, ValueError):
+            subscriber_count = None
 
         title = snippet.get("title") or branding_channel.get("title")
         description = snippet.get("description")
@@ -323,6 +344,7 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
                 custom_url=custom_url,
                 avatar_url=avatar_url,
                 banner_url=banner_url,
+                subscriber_count=subscriber_count,
                 is_monetized=is_monetized,
                 is_active=True,
                 published_at=published_at,
@@ -343,6 +365,8 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
                 ch.avatar_url = avatar_url
             if banner_url:
                 ch.banner_url = banner_url
+            if subscriber_count is not None:
+                ch.subscriber_count = subscriber_count
             if is_monetized is not None:
                 ch.is_monetized = is_monetized
             ch.is_active = True

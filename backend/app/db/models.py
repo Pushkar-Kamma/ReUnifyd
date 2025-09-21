@@ -162,6 +162,7 @@ class Channel(SQLModel, table=True):
     custom_url: Optional[str] = None
     avatar_url: Optional[str] = None
     banner_url: Optional[str] = None
+    subscriber_count: Optional[int] = Field(default=None, sa_column=Column(BigInteger))
     is_monetized: Optional[bool] = None
     published_at: Optional[dt.datetime] = Field(
         sa_column=Column(TIMESTAMP(timezone=True))

@@ -145,6 +145,7 @@ def list_channels(
                 "description": c.description,
                 "country": c.country,
                 "language": c.language,
+                "subscriber_count": c.subscriber_count,
                 "platform_account_id": c.platform_account_id,
                 "is_active": c.is_active,
                 "published_at": c.published_at,

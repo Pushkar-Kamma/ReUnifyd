@@ -1,6 +1,7 @@
 # backend/app/api/auth_google.py
 from __future__ import annotations
 import datetime as dt
+import httpx
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -13,7 +14,6 @@ from ..db.models import (
     User, Platform, PlatformAccount, OAuthCredential, Channel, UserChannel,
 )
 from ..services.google_oauth import oauth
-from ..services.youtube_client import yt_channels_me
 from app.core.crypto import encrypt_str
 
 router = APIRouter(prefix="/auth/google", tags=["auth-google"])
@@ -195,13 +195,35 @@ async def google_callback(
     session.commit()
     session.refresh(cred)
 
+    header_access_token = access_token
+    if not header_access_token and getattr(cred, "access_token_encrypted", None):
+        try:
+            header_access_token = decrypt_str(cred.access_token_encrypted)
+        except Exception:
+            header_access_token = None
+
     # Fetch channels, upsert them, and link to the current user
+    async def _fetch_youtube_channels(token: str) -> list[dict]:
+        params = {
+            "part": "snippet,contentDetails,statistics,brandingSettings",
+            "mine": "true",
+            "maxResults": 50,
+        }
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.get(
+                "https://www.googleapis.com/youtube/v3/channels",
+                params=params,
+                headers={"Authorization": f"Bearer {header_access_token}"},
+            )
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("items", [])
+
     try:
-        yt_response = yt_channels_me(session, cred) or {}
+        items = await _fetch_youtube_channels(header_access_token)
     except Exception:
         return RedirectResponse(url="/ui/link.html?oauth_error=channel_sync_failed", status_code=303)
 
-    items = yt_response.get("items") or []
     seen_channel_ids: set[str] = set()
     for item in items:
         channel_id = item.get("id")
@@ -214,6 +236,13 @@ async def google_callback(
         branding_channel = branding.get("channel") or {}
         branding_image = branding.get("image") or {}
         status = item.get("status") or {}
+        statistics = item.get("statistics") or {}
+        subscriber_count = None
+        try:
+            if statistics.get("subscriberCount") is not None:
+                subscriber_count = int(statistics.get("subscriberCount"))
+        except (TypeError, ValueError):
+            subscriber_count = None
 
         title = snippet.get("title") or branding_channel.get("title")
         description = snippet.get("description")
@@ -246,6 +275,7 @@ async def google_callback(
                 custom_url=custom_url,
                 avatar_url=avatar_url,
                 banner_url=banner_url,
+                subscriber_count=subscriber_count,
                 is_monetized=is_monetized,
                 is_active=True,
                 published_at=published_at,
@@ -266,6 +296,8 @@ async def google_callback(
                 ch.avatar_url = avatar_url
             if banner_url:
                 ch.banner_url = banner_url
+            if subscriber_count is not None:
+                ch.subscriber_count = subscriber_count
             if is_monetized is not None:
                 ch.is_monetized = is_monetized
             ch.is_active = True
