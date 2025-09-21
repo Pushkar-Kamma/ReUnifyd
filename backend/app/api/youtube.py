@@ -4,6 +4,7 @@ from __future__ import annotations
 import datetime as dt
 import httpx
 import sqlalchemy as sa
+import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import Session, select
 from typing import Optional
@@ -19,7 +20,9 @@ from ..db.models import (
     UserChannel,
     Video,
     ChannelDailyMetrics,
+    ChannelHourlyMetrics,
     VideoDailyMetrics,
+    VideoHourlyMetrics,
 )
 from ..services.token_helper import (
     get_valid_access_token,
@@ -47,6 +50,26 @@ async def _yt_analytics_get(request, token: str, params: dict):
             params=params,
             headers={"Authorization": f"Bearer {token}"},
         )
+
+_DURATION_RE = re.compile(
+    r"^P(?:(?P<days>\d+)D)?"
+    r"(?:T(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?)?$"
+)
+
+
+def _iso_duration_to_seconds(value: Optional[str]) -> Optional[int]:
+    if not value:
+        return None
+    match = _DURATION_RE.match(value)
+    if not match:
+        return None
+    days = int(match.group('days') or 0)
+    hours = int(match.group('hours') or 0)
+    minutes = int(match.group('minutes') or 0)
+    seconds = int(match.group('seconds') or 0)
+    total = days * 86400 + hours * 3600 + minutes * 60 + seconds
+    return total if total >= 0 else None
+
 
 # ----------------------------
 # Me: YouTube account channels via "mine=true"
@@ -323,117 +346,338 @@ async def sync_full(
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-    # Discover videos via uploads playlist
-    try:
+    now = dt.datetime.utcnow()
+    end_date = dt.date.today()
+    start_date = end_date - dt.timedelta(days=max(1, days) - 1)
+    hourly_window_days = max(1, min(days, 7))
+    hourly_start_date = end_date - dt.timedelta(days=hourly_window_days - 1)
+
+    async def data_api_get(url: str, params: dict) -> dict:
+        nonlocal token
         async with httpx.AsyncClient(timeout=20.0) as client:
-            ch_resp = await client.get(
-                "https://www.googleapis.com/youtube/v3/channels",
-                params={"part": "contentDetails", "id": c.external_channel_id},
+            resp = await client.get(
+                url,
+                params=params,
                 headers={"Authorization": f"Bearer {token}"},
             )
-        if ch_resp.status_code == 401:
+        if resp.status_code == 401:
             token = await get_valid_access_token_for_channel(request, session, channel_id)
             async with httpx.AsyncClient(timeout=20.0) as client:
-                ch_resp = await client.get(
-                    "https://www.googleapis.com/youtube/v3/channels",
-                    params={"part": "contentDetails", "id": c.external_channel_id},
+                resp = await client.get(
+                    url,
+                    params=params,
                     headers={"Authorization": f"Bearer {token}"},
                 )
-        ch_resp.raise_for_status()
-        uploads = ch_resp.json()["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        resp.raise_for_status()
+        return resp.json()
 
-        video_ids_external: list[str] = []
-        next_page: Optional[str] = None
-        while True:
-            async with httpx.AsyncClient(timeout=20.0) as client:
-                pl_resp = await client.get(
-                    "https://www.googleapis.com/youtube/v3/playlistItems",
-                    params={
-                        "part": "contentDetails,snippet",
-                        "playlistId": uploads,
-                        "maxResults": 50,
-                        **({"pageToken": next_page} if next_page else {}),
-                    },
-                    headers={"Authorization": f"Bearer {token}"},
+    async def analytics_get_json(params: dict) -> dict:
+        nonlocal token
+        resp = await _yt_analytics_get(request, token, params)
+        if resp.status_code == 401:
+            token = await get_valid_access_token_for_channel(request, session, channel_id)
+            resp = await _yt_analytics_get(request, token, params)
+        resp.raise_for_status()
+        return resp.json()
+
+    channel_data = await data_api_get(
+        "https://www.googleapis.com/youtube/v3/channels",
+        {
+            "part": "snippet,contentDetails,statistics",
+            "id": c.external_channel_id,
+        },
+    )
+    channel_items = channel_data.get("items") or []
+    if not channel_items:
+        raise HTTPException(status_code=400, detail="unable to locate uploads playlist for channel")
+    channel_info = channel_items[0]
+    uploads = (
+        channel_info.get("contentDetails", {})
+        .get("relatedPlaylists", {})
+        .get("uploads")
+    )
+    if not uploads:
+        raise HTTPException(status_code=400, detail="channel has no uploads playlist")
+
+    current_subscribers: Optional[int] = None
+    stats = channel_info.get("statistics") or {}
+    if stats.get("subscriberCount") is not None:
+        try:
+            current_subscribers = int(stats.get("subscriberCount"))
+            c.subscriber_count = current_subscribers
+        except (TypeError, ValueError):
+            current_subscribers = None
+    snippet = channel_info.get("snippet") or {}
+    if snippet.get("description"):
+        c.description = snippet.get("description")
+    if snippet.get("customUrl"):
+        c.custom_url = snippet.get("customUrl")
+    if snippet.get("title"):
+        c.title = snippet.get("title")
+    if snippet.get("country"):
+        c.country = snippet.get("country")
+    session.add(c)
+    session.flush()
+
+    async def sync_channel_metrics() -> None:
+        metrics = [
+            "views",
+            "estimatedMinutesWatched",
+            "impressions",
+            "impressionsClickThroughRate",
+            "subscribersGained",
+            "subscribersLost",
+            "estimatedRevenue",
+        ]
+        try:
+            daily = await analytics_get_json(
+                {
+                    "ids": f"channel=={c.external_channel_id}",
+                    "startDate": start_date.isoformat(),
+                    "endDate": end_date.isoformat(),
+                    "metrics": ",".join(metrics),
+                    "dimensions": "day",
+                }
+            )
+        except httpx.HTTPStatusError:
+            daily = None
+        if daily:
+            headers = [h["name"] for h in daily.get("columnHeaders", [])]
+            rows = daily.get("rows", []) or []
+            idx = {name: i for i, name in enumerate(headers)}
+
+            def _get(row, name, default=None):
+                i = idx.get(name)
+                return row[i] if i is not None and i < len(row) else default
+
+            for row in rows:
+                day = dt.date.fromisoformat(_get(row, "day"))
+                session.exec(
+                    sa.text(
+                        "DELETE FROM channel_daily_metrics WHERE channel_id = :cid AND date = :d"
+                    ),
+                    {"cid": c.id, "d": day},
                 )
-            if pl_resp.status_code == 401:
-                token = await get_valid_access_token_for_channel(request, session, channel_id)
-                async with httpx.AsyncClient(timeout=20.0) as client:
-                    pl_resp = await client.get(
-                        "https://www.googleapis.com/youtube/v3/playlistItems",
-                        params={
-                            "part": "contentDetails,snippet",
-                            "playlistId": uploads,
-                            "maxResults": 50,
-                            **({"pageToken": next_page} if next_page else {}),
-                        },
-                        headers={"Authorization": f"Bearer {token}"},
+                session.add(
+                    ChannelDailyMetrics(
+                        channel_id=c.id,
+                        date=day,
+                        subscribers_total=current_subscribers if (current_subscribers is not None and day == end_date) else None,
+                        subscribers_gained=int(_get(row, "subscribersGained", 0) or 0),
+                        subscribers_lost=int(_get(row, "subscribersLost", 0) or 0),
+                        views=int(_get(row, "views", 0) or 0),
+                        watch_time_minutes=int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0))),
+                        impressions=int(_get(row, "impressions", 0) or 0),
+                        click_through_rate=float(_get(row, "impressionsClickThroughRate", 0) or 0.0) * 100.0,
+                        estimated_revenue=float(_get(row, "estimatedRevenue", 0) or 0.0),
+                        revenue_currency=None,
                     )
-            pl_resp.raise_for_status()
-            plj = pl_resp.json()
-            for it in plj.get("items", []):
-                vid_ext = it["contentDetails"]["videoId"]
-                snippet = it.get("snippet", {}) or {}
-                title = snippet.get("title")
-                published_at = it["contentDetails"].get("videoPublishedAt")
-                thumb = snippet.get("thumbnails", {}).get("default", {}).get("url")
+                )
+            session.commit()
 
-                # Upsert Video by (platform_id, external_video_id)
+        try:
+            hourly = await analytics_get_json(
+                {
+                    "ids": f"channel=={c.external_channel_id}",
+                    "startDate": hourly_start_date.isoformat(),
+                    "endDate": end_date.isoformat(),
+                    "metrics": ",".join(metrics),
+                    "dimensions": "day,hour",
+                }
+            )
+        except httpx.HTTPStatusError:
+            hourly = None
+        if hourly:
+            headers = [h["name"] for h in hourly.get("columnHeaders", [])]
+            rows = hourly.get("rows", []) or []
+            idx = {name: i for i, name in enumerate(headers)}
+
+            def _get(row, name, default=None):
+                i = idx.get(name)
+                return row[i] if i is not None and i < len(row) else default
+
+            for row in rows:
+                day = dt.date.fromisoformat(_get(row, "day"))
+                hour_val = int(_get(row, "hour", 0) or 0)
+                hour_start = dt.datetime.combine(day, dt.time()) + dt.timedelta(hours=hour_val)
+                session.exec(
+                    sa.text(
+                        "DELETE FROM channel_hourly_metrics WHERE channel_id = :cid AND hour_start = :hs"
+                    ),
+                    {"cid": c.id, "hs": hour_start},
+                )
+                session.add(
+                    ChannelHourlyMetrics(
+                        channel_id=c.id,
+                        hour_start=hour_start,
+                        views=int(_get(row, "views", 0) or 0),
+                        watch_time_minutes=int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0))),
+                        impressions=int(_get(row, "impressions", 0) or 0),
+                        likes=None,
+                        comments=None,
+                        subscribers_gained=int(_get(row, "subscribersGained", 0) or 0),
+                        estimated_revenue=float(_get(row, "estimatedRevenue", 0) or 0.0),
+                    )
+                )
+            session.commit()
+
+    await sync_channel_metrics()
+
+    video_ids_external: list[str] = []
+    next_page: Optional[str] = None
+    while True:
+        params = {
+            "part": "contentDetails,snippet",
+            "playlistId": uploads,
+            "maxResults": 50,
+        }
+        if next_page:
+            params["pageToken"] = next_page
+        page = await data_api_get(
+            "https://www.googleapis.com/youtube/v3/playlistItems",
+            params,
+        )
+        for it in page.get("items", []):
+            content_details = it.get("contentDetails", {})
+            vid_ext = content_details.get("videoId")
+            if not vid_ext:
+                continue
+            snippet_item = it.get("snippet", {}) or {}
+            title = snippet_item.get("title")
+            published_at = content_details.get("videoPublishedAt") or snippet_item.get("publishedAt")
+            thumbs = snippet_item.get("thumbnails", {}) or {}
+            thumb = (
+                thumbs.get("maxres", {}).get("url")
+                or thumbs.get("high", {}).get("url")
+                or thumbs.get("medium", {}).get("url")
+                or thumbs.get("default", {}).get("url")
+            )
+
+            v = session.exec(
+                select(Video).where(
+                    Video.platform_id == c.platform_id,
+                    Video.external_video_id == vid_ext,
+                )
+            ).first()
+            if v:
+                if title:
+                    v.title = title
+                if thumb:
+                    v.thumbnail_url = thumb
+                if published_at:
+                    try:
+                        v.published_at = dt.datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                    except Exception:
+                        pass
+                v.channel_id = c.id
+                v.is_active = True
+                session.add(v)
+            else:
+                v = Video(
+                    platform_id=c.platform_id,
+                    channel_id=c.id,
+                    external_video_id=vid_ext,
+                    title=title or "",
+                    description=None,
+                    category=None,
+                    privacy_status=None,
+                    content_type="video",
+                    duration_seconds=None,
+                    published_at=(dt.datetime.fromisoformat(published_at.replace("Z", "+00:00")) if published_at else None),
+                    thumbnail_url=thumb,
+                    tags=None,
+                    last_synced_at=None,
+                    is_active=True,
+                )
+                session.add(v)
+            video_ids_external.append(vid_ext)
+        session.commit()
+        next_page = page.get("nextPageToken")
+        if not next_page:
+            break
+
+    async def enrich_videos(video_ids: list[str]) -> None:
+        nonlocal token
+        if not video_ids:
+            return
+        for i in range(0, len(video_ids), 50):
+            chunk = video_ids[i:i + 50]
+            try:
+                data = await data_api_get(
+                    "https://www.googleapis.com/youtube/v3/videos",
+                    {
+                        "part": "snippet,contentDetails,status",
+                        "id": ",".join(chunk),
+                    },
+                )
+            except httpx.HTTPStatusError:
+                continue
+            for item in data.get("items", []):
+                vid_ext = item.get("id")
+                if not vid_ext:
+                    continue
                 v = session.exec(
                     select(Video).where(
                         Video.platform_id == c.platform_id,
                         Video.external_video_id == vid_ext,
                     )
                 ).first()
-                if v:
-                    if title:
-                        v.title = title
-                    v.thumbnail_url = thumb or v.thumbnail_url
-                    if published_at:
-                        try:
-                            v.published_at = dt.datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-                        except Exception:
-                            pass
-                    v.channel_id = c.id
-                    v.is_active = True
-                    session.add(v)
-                else:
-                    v = Video(
-                        platform_id=c.platform_id,
-                        channel_id=c.id,
-                        external_video_id=vid_ext,
-                        title=title or "",
-                        description=None,
-                        category=None,
-                        privacy_status=None,
-                        content_type="video",
-                        duration_seconds=None,
-                        published_at=(dt.datetime.fromisoformat(published_at.replace("Z", "+00:00")) if published_at else None),
-                        thumbnail_url=thumb,
-                        tags=None,
-                        last_synced_at=None,
-                        is_active=True,
-                    )
-                    session.add(v)
-                session.commit()
-                video_ids_external.append(vid_ext)
-            next_page = plj.get("nextPageToken")
-            if not next_page:
-                break
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"failed to list videos: {e}")
+                if not v:
+                    continue
+                snippet_item = item.get("snippet", {}) or {}
+                status_item = item.get("status", {}) or {}
+                content_details = item.get("contentDetails", {}) or {}
+                if snippet_item.get("title"):
+                    v.title = snippet_item.get("title")
+                if snippet_item.get("description") is not None:
+                    v.description = snippet_item.get("description")
+                if snippet_item.get("categoryId") is not None:
+                    v.category = str(snippet_item.get("categoryId"))
+                if snippet_item.get("publishedAt"):
+                    try:
+                        v.published_at = dt.datetime.fromisoformat(snippet_item.get("publishedAt").replace("Z", "+00:00"))
+                    except Exception:
+                        pass
+                thumbs = snippet_item.get("thumbnails", {}) or {}
+                thumb = (
+                    thumbs.get("maxres", {}).get("url")
+                    or thumbs.get("high", {}).get("url")
+                    or thumbs.get("medium", {}).get("url")
+                    or thumbs.get("default", {}).get("url")
+                )
+                if thumb:
+                    v.thumbnail_url = thumb
+                tags_value = snippet_item.get("tags")
+                if tags_value is not None:
+                    v.tags = tags_value
+                if status_item.get("privacyStatus"):
+                    v.privacy_status = status_item.get("privacyStatus")
+                duration_seconds = _iso_duration_to_seconds(content_details.get("duration"))
+                if duration_seconds is not None:
+                    v.duration_seconds = duration_seconds
+                    v.content_type = "short" if duration_seconds <= 60 else "video"
+                v.last_synced_at = now
+                session.add(v)
+        session.commit()
+
+    await enrich_videos(video_ids_external)
+
+    video_ids_external = list(dict.fromkeys(video_ids_external))
+
+    video_map = {
+        v.external_video_id: v
+        for v in session.exec(select(Video).where(Video.channel_id == c.id)).all()
+    }
 
     # Per-video daily metrics
-    end = dt.date.today()
-    start = end - dt.timedelta(days=max(1, days) - 1)
     inserted = 0
     videos_with_metrics: set[str] = set()
 
     for vid_ext in video_ids_external:
         params = {
             "ids": f"channel=={c.external_channel_id}",
-            "startDate": start.isoformat(),
-            "endDate": end.isoformat(),
+            "startDate": start_date.isoformat(),
+            "endDate": end_date.isoformat(),
             "metrics": ",".join([
                 "views",
                 "estimatedMinutesWatched",
@@ -450,17 +694,11 @@ async def sync_full(
             "dimensions": "day",
             "filters": f"video=={vid_ext}",
         }
-        r = await _yt_analytics_get(request, token, params)
-        if r.status_code == 401:
-            token = await get_valid_access_token_for_channel(request, session, channel_id)
-            r = await _yt_analytics_get(request, token, params)
         try:
-            r.raise_for_status()
+            data = await analytics_get_json(params)
         except httpx.HTTPStatusError:
-            # fallback later with Data API
             continue
 
-        data = r.json()
         headers = [h["name"] for h in data.get("columnHeaders", [])]
         rows = data.get("rows", []) or []
         idx = {name: i for i, name in enumerate(headers)}
@@ -469,12 +707,7 @@ async def sync_full(
             i = idx.get(name)
             return row[i] if i is not None and i < len(row) else default
 
-        v = session.exec(
-            select(Video).where(
-                Video.platform_id == c.platform_id,
-                Video.external_video_id == vid_ext,
-            )
-        ).first()
+        v = video_map.get(vid_ext)
         if not v:
             continue
 
@@ -498,88 +731,150 @@ async def sync_full(
                 ),
                 {"vid": v.id, "d": day},
             )
-            session.add(VideoDailyMetrics(
-                video_id=v.id,
-                date=day,
-                views=views,
-                watch_time_minutes=int(round(emw)),
-                avg_view_duration_seconds=int(round(avgd)),
-                avg_percent_viewed=avgp,
-                likes=likes,
-                comments=comments,
-                shares=shares,
-                impressions=impr,
-                click_through_rate=ctr0_1 * 100.0,
-                subs_gained_from_video=sg_vid,
-                estimated_revenue=rev,
-                revenue_currency=None,
-            ))
+            session.add(
+                VideoDailyMetrics(
+                    video_id=v.id,
+                    date=day,
+                    views=views,
+                    watch_time_minutes=int(round(emw)),
+                    avg_view_duration_seconds=int(round(avgd)),
+                    avg_percent_viewed=avgp,
+                    likes=likes,
+                    comments=comments,
+                    shares=shares,
+                    impressions=impr,
+                    click_through_rate=ctr0_1 * 100.0,
+                    subs_gained_from_video=sg_vid,
+                    estimated_revenue=rev,
+                    revenue_currency=None,
+                )
+            )
             inserted += 1
             videos_with_metrics.add(vid_ext)
+        v.last_synced_at = now
+        session.add(v)
         session.commit()
 
     # Fallback snapshot for videos with no Analytics rows
-    try:
-        missing = [v for v in video_ids_external if v not in videos_with_metrics]
-        if missing:
-            batch = 50
-            today = dt.date.today()
-            for i in range(0, len(missing), batch):
-                ids = ",".join(missing[i:i+batch])
-                async with httpx.AsyncClient(timeout=20.0) as client:
-                    stats_resp = await client.get(
-                        "https://www.googleapis.com/youtube/v3/videos",
-                        params={"part": "statistics", "id": ids},
-                        headers={"Authorization": f"Bearer {token}"},
-                    )
-                if stats_resp.status_code == 401:
-                    token = await get_valid_access_token_for_channel(request, session, channel_id)
-                    async with httpx.AsyncClient(timeout=20.0) as client:
-                        stats_resp = await client.get(
-                            "https://www.googleapis.com/youtube/v3/videos",
-                            params={"part": "statistics", "id": ids},
-                            headers={"Authorization": f"Bearer {token}"},
-                        )
-                try:
-                    stats_resp.raise_for_status()
-                except httpx.HTTPStatusError:
+    missing = [v for v in video_ids_external if v not in videos_with_metrics]
+    if missing:
+        batch = 50
+        for i in range(0, len(missing), batch):
+            ids = ",".join(missing[i:i + batch])
+            try:
+                stats_resp = await data_api_get(
+                    "https://www.googleapis.com/youtube/v3/videos",
+                    {"part": "statistics", "id": ids},
+                )
+            except httpx.HTTPStatusError:
+                continue
+            for item in stats_resp.get("items", []):
+                vid_ext = item.get("id")
+                if not vid_ext:
                     continue
-                stj = stats_resp.json()
-                for item in stj.get("items", []):
-                    vid_ext = item.get("id")
-                    st = item.get("statistics", {})
-                    views = int(st.get("viewCount", 0) or 0)
-                    likes = int(st.get("likeCount", 0) or 0)
+                st = item.get("statistics", {}) or {}
+                views = int(st.get("viewCount", 0) or 0)
+                likes = int(st.get("likeCount", 0) or 0)
 
-                    v = session.exec(
-                        select(Video).where(
-                            Video.platform_id == c.platform_id,
-                            Video.external_video_id == vid_ext,
-                        )
-                    ).first()
-                    if not v:
-                        continue
+                v = video_map.get(vid_ext)
+                if not v:
+                    continue
 
-                    session.exec(
-                        sa.text(
-                            "DELETE FROM video_daily_metrics WHERE video_id = :vid AND date = :d"
-                        ),
-                        {"vid": v.id, "d": today},
-                    )
-                    session.add(VideoDailyMetrics(
+                session.exec(
+                    sa.text(
+                        "DELETE FROM video_daily_metrics WHERE video_id = :vid AND date = :d"
+                    ),
+                    {"vid": v.id, "d": end_date},
+                )
+                session.add(
+                    VideoDailyMetrics(
                         video_id=v.id,
-                        date=today,
+                        date=end_date,
                         views=views,
+                        watch_time_minutes=None,
+                        avg_view_duration_seconds=None,
+                        avg_percent_viewed=None,
                         likes=likes,
-                    ))
-                    inserted += 1
+                        comments=None,
+                        shares=None,
+                        impressions=None,
+                        click_through_rate=None,
+                        subs_gained_from_video=None,
+                        estimated_revenue=None,
+                        revenue_currency=None,
+                    )
+                )
+                v.last_synced_at = now
+                session.add(v)
             session.commit()
-    except Exception:
-        pass
 
-    # Mark channel as synced
+    async def sync_video_hourly_metrics(video_ids: list[str]) -> None:
+        if not video_ids:
+            return
+        metrics = [
+            "views",
+            "estimatedMinutesWatched",
+            "impressions",
+            "likes",
+            "comments",
+            "shares",
+            "subscribersGained",
+            "estimatedRevenue",
+        ]
+        for vid_ext in video_ids:
+            v = video_map.get(vid_ext)
+            if not v:
+                continue
+            params = {
+                "ids": f"channel=={c.external_channel_id}",
+                "startDate": hourly_start_date.isoformat(),
+                "endDate": end_date.isoformat(),
+                "metrics": ",".join(metrics),
+                "dimensions": "day,hour",
+                "filters": f"video=={vid_ext}",
+            }
+            try:
+                data = await analytics_get_json(params)
+            except httpx.HTTPStatusError:
+                continue
+            headers = [h["name"] for h in data.get("columnHeaders", [])]
+            rows = data.get("rows", []) or []
+            idx = {name: i for i, name in enumerate(headers)}
+
+            def _get(row, name, default=None):
+                i = idx.get(name)
+                return row[i] if i is not None and i < len(row) else default
+
+            for row in rows:
+                day = dt.date.fromisoformat(_get(row, "day"))
+                hour_val = int(_get(row, "hour", 0) or 0)
+                hour_start = dt.datetime.combine(day, dt.time()) + dt.timedelta(hours=hour_val)
+                session.exec(
+                    sa.text(
+                        "DELETE FROM video_hourly_metrics WHERE video_id = :vid AND hour_start = :hs"
+                    ),
+                    {"vid": v.id, "hs": hour_start},
+                )
+                session.add(
+                    VideoHourlyMetrics(
+                        video_id=v.id,
+                        hour_start=hour_start,
+                        views=int(_get(row, "views", 0) or 0),
+                        watch_time_minutes=int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0))),
+                        impressions=int(_get(row, "impressions", 0) or 0),
+                        likes=int(_get(row, "likes", 0) or 0),
+                        comments=int(_get(row, "comments", 0) or 0),
+                        shares=int(_get(row, "shares", 0) or 0),
+                        subs_gained_from_video=int(_get(row, "subscribersGained", 0) or 0),
+                        estimated_revenue=float(_get(row, "estimatedRevenue", 0) or 0.0),
+                    )
+                )
+            session.commit()
+
+    await sync_video_hourly_metrics(video_ids_external)
+
     try:
-        c.last_synced_at = dt.datetime.utcnow()
+        c.last_synced_at = now
         session.add(c)
         session.commit()
     except Exception:
@@ -587,9 +882,6 @@ async def sync_full(
 
     return {"ok": True, "videos": len(video_ids_external), "rows": inserted}
 
-# ----------------------------
-# Auto sync (8-hour cadence)
-# ----------------------------
 @router.post("/sync/auto")
 async def sync_auto(
     request: Request,
