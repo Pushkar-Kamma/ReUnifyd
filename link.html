@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ReUnifyd • Link Channels</title>
+  <title>ReUnifyd - Link Channels</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
@@ -32,6 +32,11 @@
     }
     .btn:hover{filter:brightness(1.05);box-shadow:0 10px 22px rgba(239,68,68,.32)}
     .btn:active{transform:translateY(1px) scale(.99)}
+    .btn.secondary{background:#fff;color:var(--brand);border:1px solid var(--brand);box-shadow:none;}
+    .btn.secondary:hover{filter:none;background:rgba(239,68,68,0.08);}
+    .btn:disabled{opacity:0.6;cursor:not-allowed;box-shadow:none;filter:none;}
+    .button-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:var(--sp-1);}
+
     .est{margin-top:var(--sp-2);background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:var(--sp-1)}
     .est-row{display:flex;align-items:center;justify-content:space-between}
     .price{font-size:28px;font-weight:800;color:var(--brand)}
@@ -54,15 +59,18 @@
       <h1>Add a channel</h1>
       <p>Connect the Google account that owns a channel you want in your dashboard.</p>
 
-      <button type="button" class="btn" id="connectBtn">Connect Google</button>
+      <div class="button-row">
+        <button type="button" class="btn" id="connectBtn">Connect Google</button>
+        <button type="button" class="btn secondary" id="nextBtn">Next</button>
+      </div>
 
       <div class="est">
-        <div class="est-row"><div class="note">Plan</div><div id="current-plan" style="font-weight:800">—</div></div>
+        <div class="est-row"><div class="note">Plan</div><div id="current-plan" style="font-weight:800">-</div></div>
         <div class="est-row" style="margin-top:10px;"><div style="font-weight:700">Estimated monthly</div><div class="price" id="est-price">$0</div></div>
         <div class="note" id="est-note">Estimate updates as you add channels.</div>
       </div>
 
-      <p class="note" style="margin-top:var(--sp-2)">Each “channel” can be from YouTube, Instagram, or TikTok.</p>
+      <p class="note" style="margin-top:var(--sp-2)">Each "channel" can be from YouTube, Instagram, or TikTok.</p>
     </section>
 
     <!-- RIGHT: only the channel cards -->
@@ -79,6 +87,8 @@
     // ---------- Helpers ----------
     const $ = id => document.getElementById(id);
     const cap = s => s ? s[0].toUpperCase() + s.slice(1) : '';
+    const connectBtn = $('connectBtn');
+    const nextBtn = $('nextBtn');
 
     function computePrice(p, n){
       if (p === 'basic')   return (n <= 3) ? 0 : 'upgrade';
@@ -117,6 +127,45 @@
           : (plan === 'pro')
             ? 'Pro pricing: $10 base + $2 per channel.'
             : 'Basic plan selected.';
+      }
+    }
+
+    function updateNextButtonState(){
+      if (!nextBtn) return;
+      const isLoading = nextBtn.dataset.loading === '1';
+      nextBtn.disabled = isLoading || channels.length === 0;
+    }
+
+    async function handleNext(){
+      if (!nextBtn || nextBtn.dataset.loading === '1' || channels.length === 0) return;
+      const originalText = nextBtn.textContent;
+      nextBtn.dataset.loading = '1';
+      nextBtn.textContent = 'Syncing...';
+      updateNextButtonState();
+      try {
+        const resp = await fetch('/youtube/sync/manual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: '{}',
+        });
+        let data = {};
+        try {
+          data = await resp.json();
+        } catch (_) {
+          data = {};
+        }
+        if (!resp.ok || (data && data.ok === false)) {
+          const detail = data && (data.detail || data.error);
+          throw new Error(detail || 'Sync failed (' + resp.status + ')');
+        }
+        window.location.href = '/ui/dashboard.html';
+      } catch (err) {
+        console.error('channel sync failed', err);
+        alert('Unable to sync channels right now. Please try again.');
+        nextBtn.dataset.loading = '0';
+        nextBtn.textContent = originalText;
+        updateNextButtonState();
       }
     }
 
@@ -234,12 +283,14 @@
 
     async function bootstrap(){
       await ensureAuth();
+      updateNextButtonState();
 
       setPlan(planFromUrlOrSession());
 
       channels = await loadChannels();
       renderChannelCards();
       updateEstimate();
+      updateNextButtonState();
 
       const url = new URL(window.location.href);
       if (url.searchParams.get('linked')){
@@ -250,15 +301,25 @@
         channels = await loadChannels();
         renderChannelCards();
         updateEstimate();
+        updateNextButtonState();
         url.searchParams.delete('linked');
         const search = url.searchParams.toString();
         history.replaceState({}, '', search ? `${url.pathname}?${search}` : url.pathname);
       }
 
-      $('connectBtn').addEventListener('click', (e)=>{
-        e.preventDefault();
-        connectGoogle();
-      });
+      if (connectBtn) {
+        connectBtn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          connectGoogle();
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          handleNext();
+        });
+      }
 
       window.addEventListener('message', (evt)=>{
         if (evt?.data?.type === 'reunifyd:setPlan' && evt.data.plan){
