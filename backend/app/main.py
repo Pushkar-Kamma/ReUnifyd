@@ -18,11 +18,11 @@ from .db.core import engine
 from .services.google_oauth import init_oauth
 
 # --- Sentry (must init before FastAPI app for full coverage) ---
-if settings.SENTRY_DSN:
+if settings.SENTRY_DSN and settings.SENTRY_DSN.strip().startswith("http"):
     import sentry_sdk
 
     sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
+        dsn=settings.SENTRY_DSN.strip(),
         environment=settings.ENVIRONMENT,
         traces_sample_rate=0.1,
         send_default_pii=False,
