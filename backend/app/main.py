@@ -64,12 +64,10 @@ secure_cookie = is_https or env_name in {"prod", "production"}
 app.add_middleware(
     SessionMiddleware,
     secret_key=session_secret,
-    session_cookie=getattr(settings, "session_cookie_name", "app_session"),
-    same_site=getattr(settings, "session_same_site", "lax"),  # 'lax' recommended for OAuth
-    https_only=secure_cookie,  # sets the 'Secure' flag
-    max_age=getattr(settings, "session_max_age", 60 * 60 * 24 * 30),  # 30 days
-    # domain=getattr(settings, "session_cookie_domain", None),  # set if you need a specific domain
-    # path="/",
+    session_cookie=settings.SESSION_COOKIE_NAME,
+    same_site=settings.SESSION_SAME_SITE,    # 'lax' in dev, 'none' for cross-site prod
+    https_only=secure_cookie,                # 'Secure' flag — required when same_site=none
+    max_age=settings.SESSION_MAX_AGE,
 )
 
 # --- Startup: ensure DB exists, then register OAuth client ---

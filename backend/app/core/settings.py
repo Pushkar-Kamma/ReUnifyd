@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     SESSION_SECRET: str | None = None    # falls back to JWT_SECRET if missing
     FERNET_KEY: str | None = None        # required for OAuth token encryption
 
+    # --- Session cookie ---
+    SESSION_SAME_SITE: str = "lax"           # 'none' for cross-site cookies in prod
+    SESSION_COOKIE_NAME: str = "app_session"
+    SESSION_MAX_AGE: int = 60 * 60 * 24 * 30  # 30 days
+
     # --- OAuth / Google ---
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None
