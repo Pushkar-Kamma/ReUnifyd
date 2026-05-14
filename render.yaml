@@ -1,0 +1,44 @@
+# Render Blueprint — defines the backend service.
+# When you connect the repo on Render, it offers to provision from this file.
+# Secrets (sync: false) must be set manually in the Render dashboard.
+
+services:
+  - type: web
+    name: reunifyd-api
+    runtime: docker
+    region: ohio                    # match Supabase region (us-east-2)
+    plan: free                      # upgrade to starter ($7/mo) for always-on
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: APP_BASE_URL
+        value: https://api.edstart.xyz
+      - key: FRONTEND_URL
+        value: https://app.edstart.xyz
+      - key: GOOGLE_REDIRECT_URI
+        value: https://api.edstart.xyz/auth/google/callback
+      - key: CORS_ALLOW_ORIGINS
+        value: https://app.edstart.xyz
+      - key: EMAIL_FROM
+        value: noreply@edstart.xyz
+      # --- Secrets: set in Render dashboard ---
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FERNET_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
