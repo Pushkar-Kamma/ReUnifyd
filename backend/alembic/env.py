@@ -53,6 +53,12 @@ db_url = (
 )
 db_url = _normalize_sqlite_url(db_url)
 
+# Force psycopg (v3) driver — SQLAlchemy defaults to psycopg2 for plain `postgresql://`
+if db_url.startswith("postgresql://"):
+    db_url = "postgresql+psycopg://" + db_url[len("postgresql://"):]
+elif db_url.startswith("postgres://"):
+    db_url = "postgresql+psycopg://" + db_url[len("postgres://"):]
+
 # Ensure Alembic uses the resolved URL (env var wins).
 # Escape '%' so configparser interpolation doesn't mangle URL-encoded passwords.
 config.set_main_option("sqlalchemy.url", db_url.replace("%", "%%"))

@@ -27,6 +27,17 @@ def _normalize_sqlite_url(url: str) -> str:
     return url
 
 
+def _normalize_postgres_url(url: str) -> str:
+    """Force the psycopg (v3) driver. SQLAlchemy defaults to psycopg2 for plain
+    `postgresql://`, but we ship `psycopg` instead.
+    """
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://"):]
+    if url.startswith("postgres://"):  # Render/Heroku legacy form
+        return "postgresql+psycopg://" + url[len("postgres://"):]
+    return url
+
+
 def _get_db_url() -> str:
     # Accept both lowercase and uppercase env-backed attributes
     raw = (
@@ -34,7 +45,7 @@ def _get_db_url() -> str:
         or getattr(settings, "DATABASE_URL", None)
         or "sqlite:///./dev.db"  # default for local dev (unified)
     )
-    return _normalize_sqlite_url(raw)
+    return _normalize_postgres_url(_normalize_sqlite_url(raw))
 
 
 DATABASE_URL = _get_db_url()
