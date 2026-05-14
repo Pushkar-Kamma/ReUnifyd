@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
@@ -13,20 +14,39 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 dark:border-zinc-800">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <h1 className="text-lg font-semibold">Dashboard</h1>
-          <span className="text-xs text-zinc-500">
-            backend: <span className="font-mono">{health}</span>
+    <>
+      <header className="nav-bar">
+        <div className="mx-auto flex w-[min(1120px,92vw)] items-center justify-between gap-4 py-3">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 text-[var(--ink-1)]"
+          >
+            <span className="font-bold tracking-wide">ReUnifyd</span>
+          </Link>
+          <span className="text-xs text-[var(--ink-2)]">
+            backend:{" "}
+            <span className="font-mono font-semibold text-[var(--ink-1)]">
+              {health}
+            </span>
           </span>
         </div>
       </header>
-      <section className="mx-auto max-w-6xl px-6 py-12">
-        <p className="text-zinc-500">
-          Channels, videos, and comparisons go here.
-        </p>
-      </section>
-    </main>
+
+      <main className="flex-1">
+        <section className="mx-auto w-[min(1120px,92vw)] py-10">
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="mb-8 text-[var(--ink-2)]">
+            Your channels, videos, and cross-platform comparisons live here.
+          </p>
+
+          <div className="card p-4">
+            <p className="text-sm text-[var(--ink-2)]">
+              Channels list, KPI cards, and charts will land here in the next
+              phase.
+            </p>
+          </div>
+        </section>
+      </main>
+    </>
   );
 }
