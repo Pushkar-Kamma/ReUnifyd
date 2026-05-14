@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthNav } from "@/components/auth-nav";
 
 export default function Home() {
   return (
@@ -20,12 +21,7 @@ export default function Home() {
             <span className="font-bold tracking-wide">ReUnifyd</span>
           </Link>
           <nav className="flex items-center gap-2.5">
-            <Link href="/login" className="btn">
-              Log in
-            </Link>
-            <Link href="/signup" className="btn primary">
-              Sign up
-            </Link>
+            <AuthNav />
           </nav>
         </div>
       </header>
