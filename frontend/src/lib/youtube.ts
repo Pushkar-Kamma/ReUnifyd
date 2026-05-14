@@ -54,4 +54,25 @@ export const youtube = {
     api<TimeseriesResponse>(
       `/youtube/channel/timeseries?channel_id=${channelId}&days=${days}`,
     ),
+
+  videosSummary: (channelId: number) =>
+    api<{
+      ok: true;
+      videos: VideoSummary[];
+    }>(`/youtube/videos/summary?channel_id=${channelId}`),
+};
+
+export type VideoSummary = {
+  video_id: number;
+  external_video_id: string;
+  title: string | null;
+  thumbnail_url: string | null;
+  views: number | null;
+  watch_time_minutes: number | null;
+  subs_gained_from_video: number | null;
+  estimated_revenue: number | null;
+  impressions: number | null;
+  click_through_rate: number | null;
+  avg_view_duration_seconds: number | null;
+  avg_percent_viewed: number | null;
 };

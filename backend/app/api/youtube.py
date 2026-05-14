@@ -984,7 +984,7 @@ def videos_summary(
                AVG(COALESCE(m.avg_percent_viewed,0)) as avg_percent_viewed
         FROM video v
         LEFT JOIN video_daily_metrics m ON m.video_id = v.id
-        WHERE v.channel_id = :cid AND v.is_active = 1
+        WHERE v.channel_id = :cid AND v.is_active = TRUE
         GROUP BY v.id, v.external_video_id, v.title, v.thumbnail_url
         ORDER BY views DESC
         """
