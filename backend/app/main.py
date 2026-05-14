@@ -10,7 +10,6 @@ from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
 from .api.auth import router as auth_router
-from .api.auth_google import router as auth_google_router
 from .api.test_db import router as test_db_router
 from .api.youtube import router as youtube_router
 from .core.settings import settings
@@ -105,7 +104,8 @@ def db_ping():
 app.include_router(test_db_router)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(youtube_router, prefix="/youtube", tags=["youtube"])
-app.include_router(auth_google_router)
+# Note: auth_google_router intentionally not registered — its routes are duplicates
+# of auth.py's google_init / google_callback. Kept in tree for reference.
 
 # --- Root to avoid 404 after OAuth redirect ---
 @app.get("/")

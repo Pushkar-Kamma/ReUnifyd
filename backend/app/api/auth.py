@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from app.api.deps import require_user_id
 from app.core.crypto import decrypt_str, encrypt_str  # Fernet helpers you kept
 from app.core.security import hash_password, verify_password
+from app.core.settings import settings
 
 from ..db.core import get_session
 from ..db.models import (
@@ -181,20 +182,32 @@ def _link_user_channel_owner(session: Session, user_id: int, channel_id: int) ->
         session.add(UserChannel(user_id=user_id, channel_id=channel_id, role="owner"))
         session.flush()
 
+
+def _safe_next_url(candidate: str | None, *, default_path: str = "/dashboard/channels") -> str:
+    """Return a redirect URL that is guaranteed to point at our own frontend.
+
+    Prevents open-redirect attacks via attacker-supplied `?next=https://evil.com`.
+    """
+    base = settings.FRONTEND_URL.rstrip("/")
+    if candidate:
+        # Allow paths only, or full URLs that start with our frontend base.
+        if candidate.startswith("/"):
+            return f"{base}{candidate}"
+        if candidate.startswith(base + "/") or candidate == base:
+            return candidate
+    return f"{base}{default_path}"
+
 # ---------- OAuth: init & callback ----------
 
 @router.get("/google/init")
 async def google_init(request: Request, session: Session = Depends(get_session)):
-    # Remember where to return after linking
-    next_url = request.query_params.get("next") or "/ui/link.html"
-    request.session["post_oauth_next"] = next_url
+    # Remember where to return after linking (validated against FRONTEND_URL)
+    next_url = request.query_params.get("next")
+    request.session["post_oauth_next"] = _safe_next_url(next_url)
 
     plan = request.query_params.get("plan")
     if plan and plan.lower() in {"basic", "creator", "pro"}:
         request.session["post_oauth_plan"] = plan.lower()
-
-    # (Optional) You previously enforced a user link quota here; new schema has no link_quota.
-    # If you reintroduce quotas later, compute with a join on user_channel.
 
     return await oauth.google.authorize_redirect(
         request,
@@ -206,13 +219,17 @@ async def google_init(request: Request, session: Session = Depends(get_session))
 
 @router.get("/google/callback")
 async def google_callback(request: Request, session: Session = Depends(get_session)):
+    # Where errors should bounce back to (frontend, with ?oauth_error=...)
+    err_redirect = _safe_next_url(request.session.get("post_oauth_next"))
     if (err := request.query_params.get("error")):
-        return RedirectResponse(url=f"/ui/link.html?oauth_error={err}", status_code=303)
+        sep = "&" if "?" in err_redirect else "?"
+        return RedirectResponse(url=f"{err_redirect}{sep}oauth_error={err}", status_code=303)
 
     try:
         token = await oauth.google.authorize_access_token(request)
     except Exception as exc:
-        return RedirectResponse(url=f"/ui/link.html?oauth_error={exc}", status_code=303)
+        sep = "&" if "?" in err_redirect else "?"
+        return RedirectResponse(url=f"{err_redirect}{sep}oauth_error={exc}", status_code=303)
 
     userinfo = token.get("userinfo")
     if not userinfo:
@@ -376,10 +393,9 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
 
     session.commit()
 
-    next_url = (
+    next_url = _safe_next_url(
         request.session.pop("post_oauth_next", None)
         or request.query_params.get("next")
-        or "/ui/link.html"
     )
     plan = (
         request.session.pop("post_oauth_plan", None)
