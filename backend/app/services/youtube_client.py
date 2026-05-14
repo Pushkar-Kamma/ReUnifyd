@@ -1,17 +1,18 @@
 # backend/app/services/youtube_client.py
 from __future__ import annotations
 
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from sqlmodel import Session  # typing clarity
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from sqlmodel import Session  # typing clarity
+
+from app.core.crypto import decrypt_str, encrypt_str
+from app.core.settings import settings
 
 from ..db.models import OAuthCredential
-from app.core.crypto import encrypt_str, decrypt_str
-from app.core.settings import settings
 
 # Scopes should match your OAuth consent
 _SCOPES = [
@@ -26,7 +27,7 @@ _SCOPES = [
 # Refresh a little early to avoid handing out near-expiry tokens
 _EXPIRY_SKEW = timedelta(seconds=90)
 
-def _decrypt_access_token(cred: OAuthCredential) -> Optional[str]:
+def _decrypt_access_token(cred: OAuthCredential) -> str | None:
     enc = getattr(cred, "access_token_encrypted", None)
     if not enc:
         return None
@@ -35,7 +36,7 @@ def _decrypt_access_token(cred: OAuthCredential) -> Optional[str]:
     except Exception:
         return None
 
-def _decrypt_refresh_token(cred: OAuthCredential) -> Optional[str]:
+def _decrypt_refresh_token(cred: OAuthCredential) -> str | None:
     enc = getattr(cred, "refresh_token_encrypted", None)
     if not enc:
         return None
@@ -45,17 +46,17 @@ def _decrypt_refresh_token(cred: OAuthCredential) -> Optional[str]:
         return None
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
-def _as_tzaware_utc(dt_val: Optional[datetime]) -> Optional[datetime]:
+def _as_tzaware_utc(dt_val: datetime | None) -> datetime | None:
     """Make a datetime UTC-aware; interpret naive as UTC."""
     if not dt_val:
         return None
     if dt_val.tzinfo is None:
-        return dt_val.replace(tzinfo=timezone.utc)
-    return dt_val.astimezone(timezone.utc)
+        return dt_val.replace(tzinfo=UTC)
+    return dt_val.astimezone(UTC)
 
-def _to_db_naive_utc(dt_val: Optional[datetime]) -> Optional[datetime]:
+def _to_db_naive_utc(dt_val: datetime | None) -> datetime | None:
     """Store as naive UTC for SQLite TIMESTAMP compatibility."""
     if not dt_val:
         return None
@@ -118,12 +119,12 @@ def _build_youtube_service(session: Session, cred: OAuthCredential):
     service = build("youtube", "v3", credentials=creds, cache_discovery=False)
     return service
 
-def yt_channels_me(session: Session, cred: OAuthCredential) -> Dict[str, Any]:
+def yt_channels_me(session: Session, cred: OAuthCredential) -> dict[str, Any]:
     """Return metadata for channels owned by the credentialed Google account."""
     service = _build_youtube_service(session, cred)
-    items: List[Dict[str, Any]] = []
-    page_token: Optional[str] = None
-    first: Dict[str, Any] | None = None
+    items: list[dict[str, Any]] = []
+    page_token: str | None = None
+    first: dict[str, Any] | None = None
 
     while True:
         resp = service.channels().list(

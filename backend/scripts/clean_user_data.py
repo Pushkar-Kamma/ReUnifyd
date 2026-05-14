@@ -10,10 +10,11 @@ Usage (from backend/):
 from __future__ import annotations
 
 import argparse
+
 import sqlalchemy as sa
 from sqlmodel import Session
 
-from app.db.core import engine, DATABASE_URL
+from app.db.core import DATABASE_URL, engine
 
 # Delete children first → parents later (respect FKs; avoid relying on cascades)
 TABLES_IN_DELETE_ORDER = [

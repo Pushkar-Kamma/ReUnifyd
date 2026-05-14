@@ -2,25 +2,25 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
+
 import httpx
 import sqlalchemy as sa
-import re
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import Session, select
-from typing import Optional
 
 from app.api.deps import require_user_id
+
 from ..db.core import get_session
 from ..db.models import (
-    User,
-    Platform,
-    PlatformAccount,
-    OAuthCredential,
     Channel,
-    UserChannel,
-    Video,
     ChannelDailyMetrics,
     ChannelHourlyMetrics,
+    OAuthCredential,
+    Platform,
+    PlatformAccount,
+    UserChannel,
+    Video,
     VideoDailyMetrics,
     VideoHourlyMetrics,
 )
@@ -35,7 +35,7 @@ router = APIRouter()
 # helpers
 # ----------------------------
 
-def _user_channel(session: Session, user_id: int, channel_id: int) -> Optional[Channel]:
+def _user_channel(session: Session, user_id: int, channel_id: int) -> Channel | None:
     """Return the Channel if the user is linked to it, else None."""
     return session.exec(
         select(Channel)
@@ -57,7 +57,7 @@ _DURATION_RE = re.compile(
 )
 
 
-def _iso_duration_to_seconds(value: Optional[str]) -> Optional[int]:
+def _iso_duration_to_seconds(value: str | None) -> int | None:
     if not value:
         return None
     match = _DURATION_RE.match(value)
@@ -399,7 +399,7 @@ async def sync_full(
     if not uploads:
         raise HTTPException(status_code=400, detail="channel has no uploads playlist")
 
-    current_subscribers: Optional[int] = None
+    current_subscribers: int | None = None
     stats = channel_info.get("statistics") or {}
     if stats.get("subscriberCount") is not None:
         try:
@@ -524,7 +524,7 @@ async def sync_full(
     await sync_channel_metrics()
 
     video_ids_external: list[str] = []
-    next_page: Optional[str] = None
+    next_page: str | None = None
     while True:
         params = {
             "part": "contentDetails,snippet",

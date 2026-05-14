@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
+
 from ..db.core import get_session
 from ..db.models import User
 

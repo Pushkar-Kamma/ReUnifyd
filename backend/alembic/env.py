@@ -5,9 +5,10 @@ import os
 import sys
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
+
+from alembic import context
 
 # --- Make 'app' importable (env.py is in backend/alembic/) ---
 # This adds the backend/ directory to sys.path so "app" can be imported.
@@ -15,6 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Import models ONLY to load SQLModel.metadata (no engine, no create_all)
 from app.db import models  # noqa: F401  (side-effect: registers tables on metadata)
+
 
 # -------------------------------------------------------------
 # SQLite URL normalization (align with app.db.core)

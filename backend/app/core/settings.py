@@ -1,7 +1,7 @@
 # app/core/settings.py
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List, Optional
 import os
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _resolve_env_file() -> str | None:
@@ -37,29 +37,29 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     # --- Core ---
-    DATABASE_URL: Optional[str] = None
-    REDIS_URL: Optional[str] = None
+    DATABASE_URL: str | None = None
+    REDIS_URL: str | None = None
 
     # --- Secrets (dev fallbacks; required & validated in production) ---
     JWT_SECRET: str = "dev-super-secret"
-    SESSION_SECRET: Optional[str] = None    # falls back to JWT_SECRET if missing
-    FERNET_KEY: Optional[str] = None        # required for OAuth token encryption
+    SESSION_SECRET: str | None = None    # falls back to JWT_SECRET if missing
+    FERNET_KEY: str | None = None        # required for OAuth token encryption
 
     # --- OAuth / Google ---
-    GOOGLE_CLIENT_ID: Optional[str] = None
-    GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: Optional[str] = None
-    OAUTH_REDIRECT_URL: Optional[str] = None  # legacy alias
+    GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+    GOOGLE_REDIRECT_URI: str | None = None
+    OAUTH_REDIRECT_URL: str | None = None  # legacy alias
 
     # --- CORS ---
     CORS_ALLOW_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
 
     # --- Email ---
-    RESEND_API_KEY: Optional[str] = None
+    RESEND_API_KEY: str | None = None
     EMAIL_FROM: str = "noreply@edstart.xyz"
 
     # --- Observability ---
-    SENTRY_DSN: Optional[str] = None
+    SENTRY_DSN: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=_resolve_env_file(),
@@ -73,7 +73,7 @@ class Settings(BaseSettings):
         return self.ENVIRONMENT.lower() in {"prod", "production"}
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         raw = (self.CORS_ALLOW_ORIGINS or "").strip()
         if not raw or raw == "*":
             return ["*"]

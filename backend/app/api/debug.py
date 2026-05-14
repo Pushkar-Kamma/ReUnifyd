@@ -1,15 +1,15 @@
 # app/api/debug.py
 from fastapi import APIRouter, Depends
-from sqlmodel import Session, select
 from sqlalchemy import func
+from sqlmodel import Session, select
 
 from ..db.core import get_session
 from ..db.models import (
-    User,
+    Channel,
+    OAuthCredential,  # NOTE: ensure this matches your class name; use OauthCredential if that's what you defined
     Platform,
     PlatformAccount,
-    OAuthCredential,  # NOTE: ensure this matches your class name; use OauthCredential if that's what you defined
-    Channel,
+    User,
 )
 
 router = APIRouter(prefix="/debug", tags=["debug"])

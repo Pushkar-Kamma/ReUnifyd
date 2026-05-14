@@ -1,22 +1,21 @@
 # backend/app/main.py
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
-#from sqlmodel import text
-from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 
-from .db.core import engine
-from .core.settings import settings
-from .api.test_db import router as test_db_router
-from .api.youtube import router as youtube_router
+#from sqlmodel import text
+from sqlalchemy import text
+from starlette.middleware.sessions import SessionMiddleware
+
 from .api.auth import router as auth_router
 from .api.auth_google import router as auth_google_router
-
-
-
+from .api.test_db import router as test_db_router
+from .api.youtube import router as youtube_router
+from .core.settings import settings
+from .db.core import engine
 from .services.google_oauth import init_oauth
-import os
 
 app = FastAPI(title="YT Multi-Channel API", version="0.1.0")
 

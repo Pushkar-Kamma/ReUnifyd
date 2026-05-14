@@ -2,29 +2,27 @@
 from __future__ import annotations
 
 import datetime as dt
-import httpx
-import json
-from typing import Optional
 
+import httpx
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import RedirectResponse, JSONResponse
-from sqlmodel import Session, select
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, EmailStr
-import sqlalchemy as sa
+from sqlmodel import Session, select
 
 from app.api.deps import require_user_id
+from app.core.crypto import decrypt_str, encrypt_str  # Fernet helpers you kept
+from app.core.security import hash_password, verify_password
+
 from ..db.core import get_session
 from ..db.models import (
-    User,
+    Channel,
+    OAuthCredential,
     Platform,
     PlatformAccount,
-    OAuthCredential,
-    Channel,
+    User,
     UserChannel,
 )
 from ..services.google_oauth import oauth
-from app.core.crypto import encrypt_str, decrypt_str  # Fernet helpers you kept
-from app.core.security import hash_password, verify_password
 
 router = APIRouter()
 
@@ -142,10 +140,10 @@ def _get_or_create_platform_account(
 def _upsert_oauth_credential(
     session: Session,
     platform_account_id: int,
-    access_token: Optional[str],
-    refresh_token: Optional[str],
+    access_token: str | None,
+    refresh_token: str | None,
     scopes_list: list[str],
-    expires_at: Optional[dt.datetime],
+    expires_at: dt.datetime | None,
 ) -> OAuthCredential:
     cred = session.exec(
         select(OAuthCredential).where(OAuthCredential.platform_account_id == platform_account_id)
@@ -439,7 +437,7 @@ def me_google(
 class SignupIn(BaseModel):
     email: EmailStr
     password: str
-    name: Optional[str] = None
+    name: str | None = None
 
 class LoginIn(BaseModel):
     email: EmailStr

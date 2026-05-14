@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import os
 import datetime as dt
-from typing import Optional
+import os
 
-from sqlmodel import SQLModel, Field
 from sqlalchemy import (
-    Column,
-    UniqueConstraint,
     CheckConstraint,
-    Index,
+    Column,
     ForeignKey,
+    Index,
+    UniqueConstraint,
     text,
 )
-from sqlalchemy.types import BigInteger, JSON
-from sqlalchemy.dialects.postgresql import TIMESTAMP, NUMERIC, JSONB, VARCHAR, CHAR
+from sqlalchemy.dialects.postgresql import CHAR, JSONB, NUMERIC, TIMESTAMP, VARCHAR
+from sqlalchemy.types import JSON, BigInteger
+from sqlmodel import Field, SQLModel
 
 # ------------------------------------------------------------------
 # Cross-DB helpers
@@ -33,10 +32,10 @@ def PG_ONLY(x):
 class User(SQLModel, table=True):
     __tablename__ = "user"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: Optional[str] = None
+    id: int | None = Field(default=None, primary_key=True)
+    name: str | None = None
     email: str = Field(index=True, unique=True, nullable=False)
-    password_hash: Optional[str] = None
+    password_hash: str | None = None
 
     created_at: dt.datetime = Field(
         sa_column=Column(
@@ -61,7 +60,7 @@ class User(SQLModel, table=True):
 class Platform(SQLModel, table=True):
     __tablename__ = "platform"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     # DB enforces allowed values via triggers; use VARCHAR(9) to match DDL
     name: str = Field(sa_column=Column(VARCHAR(9), nullable=False))
     created_at: dt.datetime = Field(
@@ -83,7 +82,7 @@ class Platform(SQLModel, table=True):
 class PlatformAccount(SQLModel, table=True):
     __tablename__ = "platform_account"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     platform_id: int = Field(
         sa_column=Column(
             ForeignKey("platform.id", ondelete="RESTRICT"),
@@ -98,7 +97,7 @@ class PlatformAccount(SQLModel, table=True):
             index=True,
         )
     )
-    display_name: Optional[str] = None
+    display_name: str | None = None
 
     created_at: dt.datetime = Field(
         sa_column=Column(
@@ -112,7 +111,7 @@ class PlatformAccount(SQLModel, table=True):
 class OAuthCredential(SQLModel, table=True):
     __tablename__ = "oauth_credential"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     platform_account_id: int = Field(
         sa_column=Column(
             ForeignKey("platform_account.id", ondelete="CASCADE"),
@@ -121,9 +120,9 @@ class OAuthCredential(SQLModel, table=True):
         )
     )
     access_token_encrypted: str = Field(nullable=False)
-    refresh_token_encrypted: Optional[str] = None
-    scopes: Optional[str] = Field(sa_column=Column(VARCHAR(1024)))
-    expires_at: Optional[dt.datetime] = Field(
+    refresh_token_encrypted: str | None = None
+    scopes: str | None = Field(sa_column=Column(VARCHAR(1024)))
+    expires_at: dt.datetime | None = Field(
         sa_column=Column(TIMESTAMP(timezone=True), nullable=True)
     )
     created_at: dt.datetime = Field(
@@ -141,12 +140,12 @@ class OAuthCredential(SQLModel, table=True):
 class Channel(SQLModel, table=True):
     __tablename__ = "channel"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     platform_id: int = Field(
         sa_column=Column(ForeignKey("platform.id", ondelete="RESTRICT"), nullable=False)
     )
-    platform_account_id: Optional[int] = Field(
+    platform_account_id: int | None = Field(
         sa_column=Column(
             ForeignKey("platform_account.id", ondelete="SET NULL"),
             nullable=True,
@@ -155,20 +154,20 @@ class Channel(SQLModel, table=True):
 
     external_channel_id: str = Field(nullable=False)
 
-    title: Optional[str] = None
-    description: Optional[str] = None
-    country: Optional[str] = Field(default=None, sa_column=Column(CHAR(2)))
-    language: Optional[str] = Field(default=None, sa_column=Column(CHAR(2)))
-    custom_url: Optional[str] = None
-    avatar_url: Optional[str] = None
-    banner_url: Optional[str] = None
-    subscriber_count: Optional[int] = Field(default=None, sa_column=Column(BigInteger))
-    is_monetized: Optional[bool] = None
-    published_at: Optional[dt.datetime] = Field(
+    title: str | None = None
+    description: str | None = None
+    country: str | None = Field(default=None, sa_column=Column(CHAR(2)))
+    language: str | None = Field(default=None, sa_column=Column(CHAR(2)))
+    custom_url: str | None = None
+    avatar_url: str | None = None
+    banner_url: str | None = None
+    subscriber_count: int | None = Field(default=None, sa_column=Column(BigInteger))
+    is_monetized: bool | None = None
+    published_at: dt.datetime | None = Field(
         sa_column=Column(TIMESTAMP(timezone=True))
     )
 
-    last_synced_at: Optional[dt.datetime] = Field(
+    last_synced_at: dt.datetime | None = Field(
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     is_active: bool = Field(default=True, nullable=False)
@@ -208,7 +207,7 @@ class Channel(SQLModel, table=True):
 class UserChannel(SQLModel, table=True):
     __tablename__ = "user_channel"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(
         sa_column=Column(
             ForeignKey("user.id", ondelete="CASCADE"),
@@ -242,7 +241,7 @@ class UserChannel(SQLModel, table=True):
 class Video(SQLModel, table=True):
     __tablename__ = "video"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     platform_id: int = Field(
         sa_column=Column(ForeignKey("platform.id", ondelete="RESTRICT"), nullable=False)
@@ -252,20 +251,20 @@ class Video(SQLModel, table=True):
     )
     external_video_id: str = Field(nullable=False)
 
-    title: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
+    category: str | None = None
     # Triggers enforce allowed values; lengths match DDL
-    privacy_status: Optional[str] = Field(sa_column=Column(VARCHAR(8)))
-    content_type: Optional[str] = Field(sa_column=Column(VARCHAR(5)))
-    duration_seconds: Optional[int] = Field(sa_column=Column(BigInteger))
-    published_at: Optional[dt.datetime] = Field(
+    privacy_status: str | None = Field(sa_column=Column(VARCHAR(8)))
+    content_type: str | None = Field(sa_column=Column(VARCHAR(5)))
+    duration_seconds: int | None = Field(sa_column=Column(BigInteger))
+    published_at: dt.datetime | None = Field(
         sa_column=Column(TIMESTAMP(timezone=True))
     )
-    thumbnail_url: Optional[str] = None
-    tags: Optional[dict] = Field(default=None, sa_column=Column(JSONType))
+    thumbnail_url: str | None = None
+    tags: dict | None = Field(default=None, sa_column=Column(JSONType))
 
-    last_synced_at: Optional[dt.datetime] = Field(
+    last_synced_at: dt.datetime | None = Field(
         sa_column=Column(TIMESTAMP(timezone=True))
     )
     is_active: bool = Field(default=True, nullable=False)
@@ -313,15 +312,15 @@ class ChannelDailyMetrics(SQLModel, table=True):
     )
     date: dt.date = Field(primary_key=True)
 
-    subscribers_total: Optional[int] = Field(sa_column=Column(BigInteger))
-    subscribers_gained: Optional[int] = Field(sa_column=Column(BigInteger))
-    subscribers_lost: Optional[int] = Field(sa_column=Column(BigInteger))
-    views: Optional[int] = Field(sa_column=Column(BigInteger))
-    watch_time_minutes: Optional[int] = Field(sa_column=Column(BigInteger))
-    impressions: Optional[int] = Field(sa_column=Column(BigInteger))
-    click_through_rate: Optional[float] = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
-    estimated_revenue: Optional[float] = Field(sa_column=Column(NUMERIC(12, 4)))
-    revenue_currency: Optional[str] = Field(default=None, sa_column=Column(CHAR(3)))
+    subscribers_total: int | None = Field(sa_column=Column(BigInteger))
+    subscribers_gained: int | None = Field(sa_column=Column(BigInteger))
+    subscribers_lost: int | None = Field(sa_column=Column(BigInteger))
+    views: int | None = Field(sa_column=Column(BigInteger))
+    watch_time_minutes: int | None = Field(sa_column=Column(BigInteger))
+    impressions: int | None = Field(sa_column=Column(BigInteger))
+    click_through_rate: float | None = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
+    estimated_revenue: float | None = Field(sa_column=Column(NUMERIC(12, 4)))
+    revenue_currency: str | None = Field(default=None, sa_column=Column(CHAR(3)))
 
     __table_args__ = (
         Index("ix_cdm_channel_date", "channel_id", "date"),
@@ -348,18 +347,18 @@ class VideoDailyMetrics(SQLModel, table=True):
     )
     date: dt.date = Field(primary_key=True)
 
-    views: Optional[int] = Field(sa_column=Column(BigInteger))
-    watch_time_minutes: Optional[int] = Field(sa_column=Column(BigInteger))
-    avg_view_duration_seconds: Optional[int] = Field(sa_column=Column(BigInteger))
-    avg_percent_viewed: Optional[float] = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
-    likes: Optional[int] = Field(sa_column=Column(BigInteger))
-    comments: Optional[int] = Field(sa_column=Column(BigInteger))
-    shares: Optional[int] = Field(sa_column=Column(BigInteger))
-    impressions: Optional[int] = Field(sa_column=Column(BigInteger))
-    click_through_rate: Optional[float] = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
-    subs_gained_from_video: Optional[int] = Field(sa_column=Column(BigInteger))
-    estimated_revenue: Optional[float] = Field(sa_column=Column(NUMERIC(12, 4)))
-    revenue_currency: Optional[str] = Field(default=None, sa_column=Column(CHAR(3)))
+    views: int | None = Field(sa_column=Column(BigInteger))
+    watch_time_minutes: int | None = Field(sa_column=Column(BigInteger))
+    avg_view_duration_seconds: int | None = Field(sa_column=Column(BigInteger))
+    avg_percent_viewed: float | None = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
+    likes: int | None = Field(sa_column=Column(BigInteger))
+    comments: int | None = Field(sa_column=Column(BigInteger))
+    shares: int | None = Field(sa_column=Column(BigInteger))
+    impressions: int | None = Field(sa_column=Column(BigInteger))
+    click_through_rate: float | None = Field(sa_column=Column(NUMERIC(5, 2)))  # 0..100
+    subs_gained_from_video: int | None = Field(sa_column=Column(BigInteger))
+    estimated_revenue: float | None = Field(sa_column=Column(NUMERIC(12, 4)))
+    revenue_currency: str | None = Field(default=None, sa_column=Column(CHAR(3)))
 
     __table_args__ = (
         Index("ix_vdm_video_date", "video_id", "date"),
@@ -398,13 +397,13 @@ class ChannelHourlyMetrics(SQLModel, table=True):
         )
     )
 
-    views: Optional[int] = Field(sa_column=Column(BigInteger))
-    watch_time_minutes: Optional[int] = Field(sa_column=Column(BigInteger))
-    impressions: Optional[int] = Field(sa_column=Column(BigInteger))
-    likes: Optional[int] = Field(sa_column=Column(BigInteger))
-    comments: Optional[int] = Field(sa_column=Column(BigInteger))
-    subscribers_gained: Optional[int] = Field(sa_column=Column(BigInteger))
-    estimated_revenue: Optional[float] = Field(sa_column=Column(NUMERIC(12, 4)))
+    views: int | None = Field(sa_column=Column(BigInteger))
+    watch_time_minutes: int | None = Field(sa_column=Column(BigInteger))
+    impressions: int | None = Field(sa_column=Column(BigInteger))
+    likes: int | None = Field(sa_column=Column(BigInteger))
+    comments: int | None = Field(sa_column=Column(BigInteger))
+    subscribers_gained: int | None = Field(sa_column=Column(BigInteger))
+    estimated_revenue: float | None = Field(sa_column=Column(NUMERIC(12, 4)))
 
     __table_args__ = tuple(
         filter(
@@ -442,13 +441,13 @@ class VideoHourlyMetrics(SQLModel, table=True):
         )
     )
 
-    views: Optional[int] = Field(sa_column=Column(BigInteger))
-    watch_time_minutes: Optional[int] = Field(sa_column=Column(BigInteger))
-    impressions: Optional[int] = Field(sa_column=Column(BigInteger))
-    likes: Optional[int] = Field(sa_column=Column(BigInteger))
-    comments: Optional[int] = Field(sa_column=Column(BigInteger))
-    subs_gained_from_video: Optional[int] = Field(sa_column=Column(BigInteger))
-    estimated_revenue: Optional[float] = Field(sa_column=Column(NUMERIC(12, 4)))
+    views: int | None = Field(sa_column=Column(BigInteger))
+    watch_time_minutes: int | None = Field(sa_column=Column(BigInteger))
+    impressions: int | None = Field(sa_column=Column(BigInteger))
+    likes: int | None = Field(sa_column=Column(BigInteger))
+    comments: int | None = Field(sa_column=Column(BigInteger))
+    subs_gained_from_video: int | None = Field(sa_column=Column(BigInteger))
+    estimated_revenue: float | None = Field(sa_column=Column(NUMERIC(12, 4)))
 
     __table_args__ = tuple(
         filter(
@@ -478,7 +477,7 @@ class ContentGroup(SQLModel, table=True):
     """
     __tablename__ = "content_group"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(
         sa_column=Column(
             ForeignKey("user.id", ondelete="CASCADE"),
@@ -487,7 +486,7 @@ class ContentGroup(SQLModel, table=True):
         )
     )
     name: str = Field(nullable=False)
-    description: Optional[str] = None
+    description: str | None = None
     created_at: dt.datetime = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),
@@ -509,7 +508,7 @@ class ContentGroupItem(SQLModel, table=True):
     """Membership of a video in a ContentGroup."""
     __tablename__ = "content_group_item"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     content_group_id: int = Field(
         sa_column=Column(
             ForeignKey("content_group.id", ondelete="CASCADE"),
@@ -524,7 +523,7 @@ class ContentGroupItem(SQLModel, table=True):
             index=True,
         )
     )
-    note: Optional[str] = None
+    note: str | None = None
     created_at: dt.datetime = Field(
         sa_column=Column(
             TIMESTAMP(timezone=True),

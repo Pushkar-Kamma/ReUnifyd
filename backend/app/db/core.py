@@ -1,8 +1,11 @@
 # backend/app/db/core.py
 import os
-from sqlmodel import SQLModel, create_engine, Session
-from ..core.settings import settings
+
 from sqlalchemy import event
+from sqlmodel import Session, create_engine
+
+from ..core.settings import settings
+
 
 def _normalize_sqlite_url(url: str) -> str:
     """Ensure relative SQLite URLs resolve consistently to the backend directory.

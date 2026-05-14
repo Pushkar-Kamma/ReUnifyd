@@ -1,24 +1,30 @@
 # backend/app/api/auth_google.py
 from __future__ import annotations
-import datetime as dt
-import httpx
-from typing import Optional
 
+import datetime as dt
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
 from app.api.deps import require_user_id
+from app.core.crypto import decrypt_str, encrypt_str
+
 from ..db.core import get_session
 from ..db.models import (
-    User, Platform, PlatformAccount, OAuthCredential, Channel, UserChannel,
+    Channel,
+    OAuthCredential,
+    Platform,
+    PlatformAccount,
+    User,
+    UserChannel,
 )
 from ..services.google_oauth import oauth
-from app.core.crypto import encrypt_str
 
 router = APIRouter(prefix="/auth/google", tags=["auth-google"])
 
-def _parse_google_datetime(value: Optional[str]) -> Optional[dt.datetime]:
+def _parse_google_datetime(value: str | None) -> dt.datetime | None:
     if not value:
         return None
     try:
@@ -26,17 +32,17 @@ def _parse_google_datetime(value: Optional[str]) -> Optional[dt.datetime]:
     except Exception:
         return None
 
-def _normalize_country_code(value: Optional[str]) -> Optional[str]:
+def _normalize_country_code(value: str | None) -> str | None:
     if not value:
         return None
     return value.strip().upper()[:2]
 
-def _normalize_language_code(value: Optional[str]) -> Optional[str]:
+def _normalize_language_code(value: str | None) -> str | None:
     if not value:
         return None
     return value.split('-', 1)[0].strip().lower()[:2]
 
-def _select_thumbnail(thumbnails) -> Optional[str]:
+def _select_thumbnail(thumbnails) -> str | None:
     if not thumbnails or not isinstance(thumbnails, dict):
         return None
     for key in ('high', 'medium', 'default'):
@@ -52,7 +58,7 @@ def _select_thumbnail(thumbnails) -> Optional[str]:
                 return url
     return None
 
-def _normalize_scopes(value) -> Optional[str]:
+def _normalize_scopes(value) -> str | None:
     if not value:
         return None
     if isinstance(value, str):
@@ -63,7 +69,7 @@ def _normalize_scopes(value) -> Optional[str]:
         return None
     return " ".join(sorted(set(scopes))) if scopes else None
 
-def _compute_expires_at(token: dict) -> Optional[dt.datetime]:
+def _compute_expires_at(token: dict) -> dt.datetime | None:
     if not token:
         return None
     expires_at = token.get("expires_at")
@@ -87,7 +93,7 @@ def _compute_expires_at(token: dict) -> Optional[dt.datetime]:
 async def google_init(
     request: Request,
     next: str = "/ui/link.html",
-    plan: Optional[str] = None,
+    plan: str | None = None,
 ):
     request.session["post_oauth_next"] = next
     if plan:

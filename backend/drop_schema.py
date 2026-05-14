@@ -1,6 +1,8 @@
 # backend/drop_schema.py
-import os, sys
-from sqlalchemy import create_engine, text, event, MetaData
+import os
+
+from sqlalchemy import MetaData, create_engine, event, text
+
 
 def _normalize_sqlite_url(url: str) -> str:
     """Anchor sqlite:///./*.db to the backend/ directory."""

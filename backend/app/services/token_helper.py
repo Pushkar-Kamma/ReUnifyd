@@ -2,21 +2,20 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Optional
 
-from fastapi import Request
 import httpx
+from fastapi import Request
 from sqlmodel import Session, select
 
-from ..db.models import (
-    Platform,
-    PlatformAccount,
-    OAuthCredential,
-    Channel,
-)
-from app.core.crypto import encrypt_str, decrypt_str
+from app.core.crypto import decrypt_str, encrypt_str
 from app.core.settings import settings
 
+from ..db.models import (
+    Channel,
+    OAuthCredential,
+    Platform,
+    PlatformAccount,
+)
 
 # Small expiry skew so we don't hand out almost-expired tokens
 _SKEW = dt.timedelta(seconds=90)
@@ -57,13 +56,13 @@ def _oauth_cred_for_channel(session: Session, channel_id: int) -> tuple[Channel 
     return ch, cred
 
 
-def _get_cached_access_token(cred: OAuthCredential) -> Optional[str]:
+def _get_cached_access_token(cred: OAuthCredential) -> str | None:
     """Return decrypted access token if present and not expiring soon."""
     enc = getattr(cred, "access_token_encrypted", None)
     if not enc:
         return None
     # If we have an expiry and it's too close, force refresh
-    exp: Optional[dt.datetime] = getattr(cred, "expires_at", None)
+    exp: dt.datetime | None = getattr(cred, "expires_at", None)
     if exp and (exp - _SKEW) <= dt.datetime.utcnow():
         return None
     try:
@@ -71,7 +70,7 @@ def _get_cached_access_token(cred: OAuthCredential) -> Optional[str]:
     except Exception:
         return None
 
-def _get_refresh_token(cred: OAuthCredential) -> Optional[str]:
+def _get_refresh_token(cred: OAuthCredential) -> str | None:
     enc = getattr(cred, "refresh_token_encrypted", None)
     if not enc:
         return None

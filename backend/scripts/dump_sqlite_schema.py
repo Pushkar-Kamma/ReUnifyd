@@ -1,7 +1,7 @@
 # dump_sqlite_schema.py
+import os
 import sqlite3
 import sys
-import os
 
 USAGE = """\
 Usage: python dump_sqlite_schema.py <db_path> <mode>

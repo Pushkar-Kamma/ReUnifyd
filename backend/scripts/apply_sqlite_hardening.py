@@ -1,5 +1,7 @@
 # backend/scripts/apply_sqlite_hardening.py
-import sqlite3, pathlib, sys, os
+import pathlib
+import sqlite3
+import sys
 
 # Usage:
 #   python scripts/apply_sqlite_hardening.py               # uses backend/dev.db
