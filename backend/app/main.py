@@ -42,11 +42,8 @@ app.add_middleware(
 # HttpOnly is always set by SessionMiddleware.
 # We'll set Secure based on environment and SameSite to 'lax' (works with OAuth redirects).
 # Use a dedicated SESSION_SECRET (not your JWT secret). Fallbacks kept for compatibility.
-session_secret = (
-    getattr(settings, "session_secret", None)
-    or os.environ.get("SESSION_SECRET")
-    or getattr(settings, "jwt_secret", getattr(settings, "JWT_SECRET", "change_me"))
-)
+# Session secret resolves to SESSION_SECRET, falling back to JWT_SECRET in dev.
+session_secret = settings.session_secret
 
 # Decide when to set the cookie 'Secure' flag:
 # - True for production/HTTPS
@@ -79,6 +76,9 @@ app.add_middleware(
 # --- Startup: ensure DB exists, then register OAuth client ---
 @app.on_event("startup")
 async def _startup() -> None:
+    # 0) Fail fast if required config is missing or insecure
+    settings.validate_required()
+
     # 1) DB schema
     #create_db_and_tables()
 

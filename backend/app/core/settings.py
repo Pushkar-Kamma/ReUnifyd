@@ -31,36 +31,47 @@ def _resolve_env_file() -> str | None:
 
 
 class Settings(BaseSettings):
+    # --- App ---
+    ENVIRONMENT: str = "development"
+    APP_BASE_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:3000"
+
     # --- Core ---
     DATABASE_URL: Optional[str] = None
     REDIS_URL: Optional[str] = None
 
-    # Use a stable secret in .env for sessions + JWTs (dev default is fine locally)
+    # --- Secrets (dev fallbacks; required & validated in production) ---
     JWT_SECRET: str = "dev-super-secret"
+    SESSION_SECRET: Optional[str] = None    # falls back to JWT_SECRET if missing
+    FERNET_KEY: Optional[str] = None        # required for OAuth token encryption
 
     # --- OAuth / Google ---
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-
-    # Preferred env var name
     GOOGLE_REDIRECT_URI: Optional[str] = None
-    # Back-compat with older name (will be used if GOOGLE_REDIRECT_URI missing)
-    OAUTH_REDIRECT_URL: Optional[str] = None
-
-    # Base URL of your app (used to derive redirect if none given)
-    APP_BASE_URL: str = "http://localhost:8000"
+    OAUTH_REDIRECT_URL: Optional[str] = None  # legacy alias
 
     # --- CORS ---
-    # Comma-separated list, e.g. "http://localhost:3000,https://myapp.com"
-    CORS_ALLOW_ORIGINS: str = "*"
+    CORS_ALLOW_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
 
-    # Resolve an env file robustly
+    # --- Email ---
+    RESEND_API_KEY: Optional[str] = None
+    EMAIL_FROM: str = "noreply@edstart.xyz"
+
+    # --- Observability ---
+    SENTRY_DSN: Optional[str] = None
+
     model_config = SettingsConfigDict(
         env_file=_resolve_env_file(),
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
-    # ---- Helpers / normalization ----
+    # ---- Helpers ----
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() in {"prod", "production"}
+
     @property
     def cors_origins_list(self) -> List[str]:
         raw = (self.CORS_ALLOW_ORIGINS or "").strip()
@@ -70,18 +81,43 @@ class Settings(BaseSettings):
 
     @property
     def redirect_uri(self) -> str:
-        """
-        Final redirect URI used by the app.
-        Order:
-          1) GOOGLE_REDIRECT_URI
-          2) OAUTH_REDIRECT_URL (legacy)
-          3) APP_BASE_URL + /auth/google/callback
-        """
         if self.GOOGLE_REDIRECT_URI:
             return self.GOOGLE_REDIRECT_URI
         if self.OAUTH_REDIRECT_URL:
             return self.OAUTH_REDIRECT_URL
         return f"{self.APP_BASE_URL.rstrip('/')}/auth/google/callback"
+
+    @property
+    def session_secret(self) -> str:
+        return self.SESSION_SECRET or self.JWT_SECRET
+
+    def validate_required(self) -> None:
+        """Fail fast on startup if critical config is missing or insecure."""
+        missing: list[str] = []
+        if not self.GOOGLE_CLIENT_ID:
+            missing.append("GOOGLE_CLIENT_ID")
+        if not self.GOOGLE_CLIENT_SECRET:
+            missing.append("GOOGLE_CLIENT_SECRET")
+        if not self.DATABASE_URL:
+            missing.append("DATABASE_URL")
+        if not self.FERNET_KEY:
+            missing.append("FERNET_KEY")
+
+        if self.is_production:
+            insecure_defaults = {"dev-super-secret", "change_me_locally", "replace_me", ""}
+            if not self.SESSION_SECRET or self.SESSION_SECRET in insecure_defaults:
+                missing.append("SESSION_SECRET (insecure or missing)")
+            if self.JWT_SECRET in insecure_defaults:
+                missing.append("JWT_SECRET (insecure default)")
+            if "*" in self.cors_origins_list:
+                missing.append("CORS_ALLOW_ORIGINS (wildcard not allowed in production)")
+
+        if missing:
+            raise RuntimeError(
+                "Missing/insecure required settings: "
+                + ", ".join(missing)
+                + ". See backend/.env.example."
+            )
 
 
 settings = Settings()
