@@ -73,12 +73,149 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Features */}
+        <section className="mx-auto w-[min(1120px,92vw)] py-16">
+          <h2 className="mb-2 text-center text-3xl font-bold tracking-tight">
+            Built for creators with multiple channels.
+          </h2>
+          <p className="mx-auto mb-12 max-w-2xl text-center text-[var(--ink-2)]">
+            Stop juggling YouTube Studio, Meta Business Suite, and TikTok
+            Analytics. ReUnifyd brings every metric into one view.
+          </p>
+          <div className="grid gap-5 md:grid-cols-3">
+            <Feature
+              title="One unified dashboard"
+              body="Connect your channels once. See every video and every metric without switching tabs."
+            />
+            <Feature
+              title="Same content, side by side"
+              body="Group a YouTube Short, an Instagram Reel and a TikTok of the same clip. Compare normalized rates instantly."
+            />
+            <Feature
+              title="Daily auto-sync"
+              body="We pull fresh metrics from official APIs every night. Read-only access, your tokens stay encrypted."
+            />
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className="mx-auto w-[min(1120px,92vw)] py-16">
+          <h2 className="mb-12 text-center text-3xl font-bold tracking-tight">
+            Set up in 3 steps.
+          </h2>
+          <div className="grid gap-5 md:grid-cols-3">
+            <Step n={1} title="Sign up" body="Create an account in seconds." />
+            <Step
+              n={2}
+              title="Connect channels"
+              body="One-click OAuth for YouTube. Instagram and TikTok coming soon."
+            />
+            <Step
+              n={3}
+              title="Compare & decide"
+              body="Group videos, watch trends, double-down on what works."
+            />
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="mx-auto w-[min(900px,92vw)] py-16">
+          <h2 className="mb-8 text-center text-3xl font-bold tracking-tight">
+            Frequently asked
+          </h2>
+          <div className="space-y-3">
+            <Faq q="Is ReUnifyd free?">
+              Yes — fully free during early access. We&apos;ll introduce paid
+              plans for higher channel limits and faster syncs later.
+            </Faq>
+            <Faq q="Can you post or change anything on my channels?">
+              No. We only request read-only access to analytics and channel
+              info. We never have permission to publish, edit, or delete
+              anything.
+            </Faq>
+            <Faq q="Where is my data stored?">
+              On a managed Postgres database. OAuth tokens are encrypted at
+              rest with Fernet. You can delete your account and data at any
+              time.
+            </Faq>
+            <Faq q="When will Instagram and TikTok be supported?">
+              Instagram is next on the roadmap, followed by TikTok. The schema
+              is already platform-agnostic — adding new platforms is mostly an
+              API integration.
+            </Faq>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="mx-auto w-[min(900px,92vw)] py-16 text-center">
+          <h2 className="mb-4 text-3xl font-bold tracking-tight">
+            Ready to unify your channels?
+          </h2>
+          <p className="mb-8 text-[var(--ink-2)]">
+            Free during early access. No credit card required.
+          </p>
+          <Link href="/signup" className="btn primary">
+            Create your account
+          </Link>
+        </section>
       </main>
 
-      <footer className="mx-auto w-[min(1120px,92vw)] py-10 text-sm text-[var(--ink-2)]">
-        © {new Date().getFullYear()} ReUnifyd
+      <footer className="border-t border-[var(--border)] bg-white/40">
+        <div className="mx-auto flex w-[min(1120px,92vw)] flex-col gap-2 py-8 text-sm text-[var(--ink-2)] sm:flex-row sm:justify-between">
+          <span>© {new Date().getFullYear()} ReUnifyd</span>
+          <nav className="flex gap-5">
+            <Link href="/about" className="hover:underline">
+              About
+            </Link>
+            <Link href="/pricing" className="hover:underline">
+              Pricing
+            </Link>
+            <Link href="/login" className="hover:underline">
+              Log in
+            </Link>
+          </nav>
+        </div>
       </footer>
     </>
+  );
+}
+
+function Feature({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="card p-5">
+      <h3 className="mb-2 font-semibold">{title}</h3>
+      <p className="text-sm text-[var(--ink-2)]">{body}</p>
+    </div>
+  );
+}
+
+function Step({ n, title, body }: { n: number; title: string; body: string }) {
+  return (
+    <div className="card p-5">
+      <div
+        className="mb-3 grid h-9 w-9 place-items-center rounded-full text-sm font-bold text-white"
+        style={{ background: "var(--accent)" }}
+      >
+        {n}
+      </div>
+      <h3 className="mb-1 font-semibold">{title}</h3>
+      <p className="text-sm text-[var(--ink-2)]">{body}</p>
+    </div>
+  );
+}
+
+function Faq({ q, children }: { q: string; children: React.ReactNode }) {
+  return (
+    <details className="card group p-5 [&_summary]:cursor-pointer">
+      <summary className="flex items-center justify-between font-semibold">
+        <span>{q}</span>
+        <span className="text-[var(--ink-2)] transition group-open:rotate-180">
+          ⌄
+        </span>
+      </summary>
+      <div className="mt-3 text-sm text-[var(--ink-2)]">{children}</div>
+    </details>
   );
 }
 
