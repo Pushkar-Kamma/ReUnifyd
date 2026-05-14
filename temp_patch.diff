@@ -1,6 +1,0 @@
-*** Begin Patch
-*** Update File: login.html
-@@
--      if(r.ok){ window.location.href = '/ui/dashboard.html'; return; }
-+      if(r.ok){ window.location.href = '/ui/link.html'; return; }
-*** End Patch

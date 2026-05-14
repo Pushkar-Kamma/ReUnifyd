@@ -144,10 +144,11 @@ try:
     # 2) Fallbacks (pick the first existing path)
     if not ui_dir:
         candidates = [
-            here.parents[2],                          # repo root: .../YT Dashboard
+            here.parents[2] / "legacy",               # repo/legacy (old prototype)
             here.parents[2] / "ui",                   # repo/ui
             here.parents[2] / "frontend",             # repo/frontend
             here.parents[2] / "frontend" / "dist",    # repo/frontend/dist
+            here.parents[2],                          # repo root (last resort)
         ]
         for p in candidates:
             if p.is_dir():
