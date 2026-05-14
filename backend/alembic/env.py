@@ -53,8 +53,9 @@ db_url = (
 )
 db_url = _normalize_sqlite_url(db_url)
 
-# Ensure Alembic uses the resolved URL (env var wins)
-config.set_main_option("sqlalchemy.url", db_url)
+# Ensure Alembic uses the resolved URL (env var wins).
+# Escape '%' so configparser interpolation doesn't mangle URL-encoded passwords.
+config.set_main_option("sqlalchemy.url", db_url.replace("%", "%%"))
 
 # -------------------------------------------------------------
 # Target metadata for 'autogenerate'
