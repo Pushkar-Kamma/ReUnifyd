@@ -16,13 +16,15 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: APP_BASE_URL
-        value: https://api.edstart.xyz
+        value: https://reunifyd-api.onrender.com
       - key: FRONTEND_URL
-        value: https://app.edstart.xyz
+        value: https://reunifyd.vercel.app
       - key: GOOGLE_REDIRECT_URI
-        value: https://api.edstart.xyz/auth/google/callback
+        value: https://reunifyd-api.onrender.com/auth/google/callback
       - key: CORS_ALLOW_ORIGINS
-        value: https://app.edstart.xyz
+        value: https://reunifyd.vercel.app
+      - key: SESSION_SAME_SITE
+        value: none
       - key: EMAIL_FROM
         value: noreply@edstart.xyz
       # --- Secrets: set in Render dashboard ---
