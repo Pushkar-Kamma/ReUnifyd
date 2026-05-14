@@ -80,7 +80,7 @@ def _get_refresh_token(cred: OAuthCredential) -> str | None:
         return None
 
 
-async def _refresh_with_google(request: Request, refresh_token: str) -> dict:
+async def _refresh_with_google(request: Request | None, refresh_token: str) -> dict:
     """
     POST a refresh to Google's token endpoint. Returns JSON like:
     {
@@ -91,9 +91,9 @@ async def _refresh_with_google(request: Request, refresh_token: str) -> dict:
       // sometimes: "refresh_token": "..."
     }
     """
-    token_url = getattr(
-        request.app.state, "oauth_token_url", "https://oauth2.googleapis.com/token"
-    )
+    token_url = "https://oauth2.googleapis.com/token"
+    if request is not None:
+        token_url = getattr(request.app.state, "oauth_token_url", token_url)
 
     client_id = (
         getattr(settings, "google_client_id", None)
@@ -223,4 +223,28 @@ async def refresh_and_persist_access_token(
     if not rt:
         raise RuntimeError("No refresh token stored; user must re-consent.")
     refreshed = await _refresh_with_google(request, rt)
+    return _persist_tokens_from_refresh(session, cred, refreshed)
+
+
+# ----------------------------
+# Request-less helpers (for background scheduler)
+# ----------------------------
+
+async def get_valid_access_token_for_channel_bg(
+    session: Session,
+    channel_id: int,
+) -> str:
+    """Same as get_valid_access_token_for_channel but does not require a Request."""
+    ch, cred = _oauth_cred_for_channel(session, channel_id)
+    if not ch:
+        raise RuntimeError("Channel not found.")
+    if not cred:
+        raise RuntimeError("No OAuth credential linked to this channel's account.")
+    tok = _get_cached_access_token(cred)
+    if tok:
+        return tok
+    rt = _get_refresh_token(cred)
+    if not rt:
+        raise RuntimeError("No refresh token stored; user must re-consent.")
+    refreshed = await _refresh_with_google(None, rt)
     return _persist_tokens_from_refresh(session, cred, refreshed)

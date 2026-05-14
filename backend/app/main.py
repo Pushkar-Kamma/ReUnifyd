@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
+from .api.admin import router as admin_router
 from .api.auth import router as auth_router
 from .api.test_db import router as test_db_router
 from .api.youtube import router as youtube_router
@@ -88,6 +89,16 @@ async def _startup() -> None:
     # 3) Register the Google OAuth client
     init_oauth(app, settings)
 
+    # 4) Start in-process scheduler (daily sync job)
+    from .services.scheduler import start_scheduler
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:
+    from .services.scheduler import shutdown_scheduler
+    shutdown_scheduler()
+
 
 # --- Health & DB ---
 @app.get("/health")
@@ -104,8 +115,7 @@ def db_ping():
 app.include_router(test_db_router)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(youtube_router, prefix="/youtube", tags=["youtube"])
-# Note: auth_google_router intentionally not registered — its routes are duplicates
-# of auth.py's google_init / google_callback. Kept in tree for reference.
+app.include_router(admin_router)
 
 # --- Root to avoid 404 after OAuth redirect ---
 @app.get("/")
