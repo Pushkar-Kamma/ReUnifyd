@@ -24,12 +24,34 @@ export type ChannelsResponse = {
   channels: Channel[];
 };
 
+export type DailyMetric = {
+  date: string; // ISO yyyy-mm-dd
+  views: number | null;
+  watch_time_minutes: number | null;
+  subscribers_gained: number | null;
+  subscribers_lost: number | null;
+  estimated_revenue: number | null;
+};
+
+export type TimeseriesResponse = {
+  ok: true;
+  series: DailyMetric[];
+};
+
 export const youtube = {
   channels: () => api<ChannelsResponse>("/youtube/channels"),
 
-  syncDaily: (channelId: number) =>
-    api<unknown>("/youtube/sync/daily", {
-      method: "POST",
-      body: JSON.stringify({ channel_id: channelId }),
-    }),
+  channel: (id: number) =>
+    api<{ ok: true; channel: Channel }>(`/youtube/channels/${id}`),
+
+  syncDaily: (channelId: number, days: number = 30) =>
+    api<{ ok: boolean; inserted_rows?: number; skipped?: boolean; reason?: string }>(
+      `/youtube/sync/daily?channel_id=${channelId}&days=${days}`,
+      { method: "POST" },
+    ),
+
+  timeseries: (channelId: number, days: number = 28) =>
+    api<TimeseriesResponse>(
+      `/youtube/channel/timeseries?channel_id=${channelId}&days=${days}`,
+    ),
 };

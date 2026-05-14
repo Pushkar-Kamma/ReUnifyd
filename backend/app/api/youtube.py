@@ -178,6 +178,35 @@ def list_channels(
         ],
     }
 
+
+@router.get("/channels/{channel_id}")
+def get_channel(
+    channel_id: int,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    c = _user_channel(session, user_id, channel_id)
+    if not c:
+        raise HTTPException(status_code=404, detail="channel not found")
+    return {
+        "ok": True,
+        "channel": {
+            "id": c.id,
+            "external_channel_id": c.external_channel_id,
+            "title": c.title,
+            "avatar_url": c.avatar_url,
+            "banner_url": c.banner_url,
+            "custom_url": c.custom_url,
+            "description": c.description,
+            "country": c.country,
+            "language": c.language,
+            "subscriber_count": c.subscriber_count,
+            "is_active": c.is_active,
+            "published_at": c.published_at,
+            "last_synced_at": c.last_synced_at,
+        },
+    }
+
 # ----------------------------
 # Incremental daily sync for a specific channel
 # ----------------------------
@@ -991,7 +1020,12 @@ def channel_timeseries(
         placeholders = ",".join([f":id{i}" for i in range(len(chan_ids))])
         stmt = sa.text(
             f"""
-            SELECT date, SUM(views) as views, SUM(watch_time_minutes) as watch_time_minutes
+            SELECT date,
+                   SUM(views) as views,
+                   SUM(watch_time_minutes) as watch_time_minutes,
+                   SUM(COALESCE(subscribers_gained,0)) as subscribers_gained,
+                   SUM(COALESCE(subscribers_lost,0)) as subscribers_lost,
+                   SUM(COALESCE(estimated_revenue,0)) as estimated_revenue
             FROM channel_daily_metrics
             WHERE channel_id IN ({placeholders}) AND date BETWEEN :start AND :end
             GROUP BY date
@@ -1007,7 +1041,12 @@ def channel_timeseries(
             raise HTTPException(status_code=404, detail="channel not found")
         stmt = sa.text(
             """
-            SELECT date, views, watch_time_minutes
+            SELECT date,
+                   views,
+                   watch_time_minutes,
+                   COALESCE(subscribers_gained,0) as subscribers_gained,
+                   COALESCE(subscribers_lost,0) as subscribers_lost,
+                   COALESCE(estimated_revenue,0) as estimated_revenue
             FROM channel_daily_metrics
             WHERE channel_id = :cid AND date BETWEEN :start AND :end
             ORDER BY date
