@@ -17,7 +17,18 @@ from .core.settings import settings
 from .db.core import engine
 from .services.google_oauth import init_oauth
 
-app = FastAPI(title="YT Multi-Channel API", version="0.1.0")
+# --- Sentry (must init before FastAPI app for full coverage) ---
+if settings.SENTRY_DSN:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )
+
+app = FastAPI(title="ReUnifyd API", version="0.1.0")
 
 # --- CORS ---
 origins_csv = (

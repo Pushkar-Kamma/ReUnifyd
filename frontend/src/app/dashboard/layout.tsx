@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -24,14 +25,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    // Effect will redirect; render nothing meanwhile.
     return null;
   }
 
   return (
     <>
       <header className="nav-bar">
-        <div className="mx-auto flex w-[min(1120px,92vw)] items-center justify-between gap-4 py-3">
+        <div className="mx-auto flex w-[min(1280px,96vw)] items-center justify-between gap-4 py-3">
           <Link
             href="/dashboard"
             className="flex items-center gap-2.5 text-[var(--ink-1)]"
@@ -57,7 +57,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <div className="mx-auto flex w-[min(1280px,96vw)] flex-1 gap-6">
+        <DashboardSidebar />
+        <main className="min-w-0 flex-1">{children}</main>
+      </div>
     </>
   );
 }
