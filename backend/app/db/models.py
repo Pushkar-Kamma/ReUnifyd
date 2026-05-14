@@ -466,3 +466,74 @@ class VideoHourlyMetrics(SQLModel, table=True):
             ),
         )
     )
+
+
+# ===========================================================
+#                  CONTENT GROUPS (cross-platform comparison)
+# ===========================================================
+class ContentGroup(SQLModel, table=True):
+    """A user-defined group of videos representing the same piece of content
+    posted across different channels/platforms (e.g. a YT Short, IG Reel, and TikTok
+    of the same clip). Used to compare normalized metrics side-by-side.
+    """
+    __tablename__ = "content_group"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(
+        sa_column=Column(
+            ForeignKey("user.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    name: str = Field(nullable=False)
+    description: Optional[str] = None
+    created_at: dt.datetime = Field(
+        sa_column=Column(
+            TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=text("CURRENT_TIMESTAMP"),
+        )
+    )
+    updated_at: dt.datetime = Field(
+        sa_column=Column(
+            TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=text("CURRENT_TIMESTAMP"),
+            server_onupdate=text("CURRENT_TIMESTAMP"),
+        )
+    )
+
+
+class ContentGroupItem(SQLModel, table=True):
+    """Membership of a video in a ContentGroup."""
+    __tablename__ = "content_group_item"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    content_group_id: int = Field(
+        sa_column=Column(
+            ForeignKey("content_group.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    video_id: int = Field(
+        sa_column=Column(
+            ForeignKey("video.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
+    )
+    note: Optional[str] = None
+    created_at: dt.datetime = Field(
+        sa_column=Column(
+            TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=text("CURRENT_TIMESTAMP"),
+        )
+    )
+
+    __table_args__ = (
+        UniqueConstraint("content_group_id", "video_id", name="uq_content_group_video"),
+    )
+
