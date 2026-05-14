@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .api.admin import router as admin_router
 from .api.auth import router as auth_router
+from .api.content_groups import router as content_groups_router
 from .api.test_db import router as test_db_router
 from .api.youtube import router as youtube_router
 from .core.settings import settings
@@ -126,6 +127,7 @@ def db_ping():
 app.include_router(test_db_router)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(youtube_router, prefix="/youtube", tags=["youtube"])
+app.include_router(content_groups_router)
 app.include_router(admin_router)
 
 # --- Root to avoid 404 after OAuth redirect ---

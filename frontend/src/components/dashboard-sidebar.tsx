@@ -31,6 +31,12 @@ export function DashboardSidebar() {
         >
           Channels
         </SidebarLink>
+        <SidebarLink
+          href="/dashboard/groups"
+          active={isActive("/dashboard/groups")}
+        >
+          Content groups
+        </SidebarLink>
 
         {channels.length > 0 ? (
           <div className="mt-4">
