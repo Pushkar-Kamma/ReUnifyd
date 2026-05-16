@@ -800,6 +800,7 @@ async def sync_full(
                 st = item.get("statistics", {}) or {}
                 views = int(st.get("viewCount", 0) or 0)
                 likes = int(st.get("likeCount", 0) or 0)
+                comments = int(st.get("commentCount", 0) or 0) if st.get("commentCount") is not None else None
 
                 v = video_map.get(vid_ext)
                 if not v:
@@ -820,7 +821,7 @@ async def sync_full(
                         avg_view_duration_seconds=None,
                         avg_percent_viewed=None,
                         likes=likes,
-                        comments=None,
+                        comments=comments,
                         shares=None,
                         impressions=None,
                         click_through_rate=None,

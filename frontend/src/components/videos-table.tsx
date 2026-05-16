@@ -8,18 +8,15 @@ import { formatCount, relativeTime } from "@/lib/format";
 type SortKey =
   | "published_at"
   | "views"
-  | "watch_time_minutes"
   | "likes"
-  | "comments"
-  | "shares"
-  | "avg_view_duration_seconds";
+  | "comments";
 type SortDir = "asc" | "desc";
 
 const COLLAPSED = 10;
 
 function engagementRate(v: VideoSummary): number {
   if (!v.views) return 0;
-  const eng = (v.likes ?? 0) + (v.comments ?? 0) + (v.shares ?? 0);
+  const eng = (v.likes ?? 0) + (v.comments ?? 0);
   return (eng / v.views) * 100;
 }
 
@@ -80,16 +77,10 @@ export function VideosTable({
           return v.published_at ? Date.parse(v.published_at) : 0;
         case "views":
           return v.views ?? 0;
-        case "watch_time_minutes":
-          return v.watch_time_minutes ?? 0;
         case "likes":
           return v.likes ?? 0;
         case "comments":
           return v.comments ?? 0;
-        case "shares":
-          return v.shares ?? 0;
-        case "avg_view_duration_seconds":
-          return v.avg_view_duration_seconds ?? 0;
       }
     };
     const sign = sortDir === "asc" ? 1 : -1;
@@ -137,33 +128,17 @@ export function VideosTable({
               <SortHeader k="views" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
                 Views
               </SortHeader>
-              <SortHeader
-                k="watch_time_minutes"
-                sortKey={sortKey}
-                sortDir={sortDir}
-                onClick={clickSort}
-              >
-                Watch (h)
-              </SortHeader>
-              <SortHeader
-                k="avg_view_duration_seconds"
-                sortKey={sortKey}
-                sortDir={sortDir}
-                onClick={clickSort}
-              >
-                Avg view
-              </SortHeader>
               <SortHeader k="likes" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
                 Likes
               </SortHeader>
               <SortHeader k="comments" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
                 Comments
               </SortHeader>
-              <SortHeader k="shares" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
-                Shares
-              </SortHeader>
-              <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-[var(--ink-2)]">
-                Eng %
+              <th
+                className="px-4 py-3 text-right text-xs uppercase tracking-wide text-[var(--ink-2)]"
+                title="Engagement rate = (likes + comments) ÷ views × 100. Industry-standard metric, derived locally."
+              >
+                Eng. rate
               </th>
             </tr>
           </thead>
@@ -213,19 +188,10 @@ export function VideosTable({
                     {formatCount(v.views ?? 0)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    {formatCount(Math.round((v.watch_time_minutes ?? 0) / 60))}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {avdLabel(v.avg_view_duration_seconds)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
                     {formatCount(v.likes ?? 0)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    {formatCount(v.comments ?? 0)}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {formatCount(v.shares ?? 0)}
+                    {v.comments == null ? "—" : formatCount(v.comments)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {engagementRate(v).toFixed(2)}%
