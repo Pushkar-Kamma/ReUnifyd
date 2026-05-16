@@ -1201,8 +1201,9 @@ _VIDEO_METRICS = [
 
 
 @router.get("/videos/{video_id}")
-def get_video(
+async def get_video(
     video_id: int,
+    request: Request,
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
@@ -1229,6 +1230,29 @@ def get_video(
     ).bindparams(vid=v.id, start=start, end=end)
     series = [dict(r._mapping) for r in session.exec(stmt).all()]
 
+    # Live lifetime stats from YouTube Data API (avoids Analytics 24-48h lag).
+    # Best-effort: if the call fails, return Nones — UI falls back gracefully.
+    lifetime = {"views": None, "likes": None, "comments": None}
+    try:
+        token = await get_valid_access_token_for_channel(request, session, c.id)
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={"part": "statistics", "id": v.external_video_id},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        if resp.status_code == 200:
+            items = resp.json().get("items") or []
+            if items:
+                st = items[0].get("statistics") or {}
+                lifetime = {
+                    "views": int(st["viewCount"]) if st.get("viewCount") is not None else None,
+                    "likes": int(st["likeCount"]) if st.get("likeCount") is not None else None,
+                    "comments": int(st["commentCount"]) if st.get("commentCount") is not None else None,
+                }
+    except Exception:
+        pass
+
     return {
         "ok": True,
         "video": {
@@ -1244,6 +1268,7 @@ def get_video(
             "channel_title": c.title,
             "last_synced_at": v.last_synced_at,
         },
+        "lifetime": lifetime,
         "series": series,
     }
 

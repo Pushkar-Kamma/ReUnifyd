@@ -73,9 +73,12 @@ export const youtube = {
     ),
 
   video: (videoId: number) =>
-    api<{ ok: true; video: VideoDetail; series: VideoDailySeriesRow[] }>(
-      `/youtube/videos/${videoId}`,
-    ),
+    api<{
+      ok: true;
+      video: VideoDetail;
+      lifetime: { views: number | null; likes: number | null; comments: number | null };
+      series: VideoDailySeriesRow[];
+    }>(`/youtube/videos/${videoId}`),
 
   syncVideo: (videoId: number, force = false) =>
     api<{ ok: boolean; inserted_rows?: number; skipped?: boolean; reason?: string }>(

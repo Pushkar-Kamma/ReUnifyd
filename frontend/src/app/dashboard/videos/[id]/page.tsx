@@ -28,6 +28,11 @@ export default function VideoDetailPage({
 
   const [video, setVideo] = useState<VideoDetail | null>(null);
   const [series, setSeries] = useState<VideoDailySeriesRow[]>([]);
+  const [lifetime, setLifetime] = useState<{
+    views: number | null;
+    likes: number | null;
+    comments: number | null;
+  } | null>(null);
   const [retention, setRetention] = useState<
     Array<{ t: number; ratio: number; relative: number | null }> | null
   >(null);
@@ -43,6 +48,7 @@ export default function VideoDetailPage({
       const r = await youtube.video(id);
       setVideo(r.video);
       setSeries(r.series);
+      setLifetime(r.lifetime);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setError("Video not found.");
@@ -197,15 +203,33 @@ export default function VideoDetailPage({
       ) : null}
 
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Lifetime
+      </h2>
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Kpi
+          label="Views"
+          value={lifetime?.views != null ? formatCount(lifetime.views) : "—"}
+          sub={`${formatCount(totals.views)} in last 180d`}
+        />
+        <Kpi
+          label="Likes"
+          value={lifetime?.likes != null ? formatCount(lifetime.likes) : "—"}
+          sub={`${formatCount(totals.likes)} in last 180d`}
+        />
+        <Kpi
+          label="Comments"
+          value={lifetime?.comments != null ? formatCount(lifetime.comments) : "—"}
+          sub={`${formatCount(totals.comments)} in last 180d`}
+        />
+      </div>
+
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Last 180 days
       </h2>
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        <Kpi label="Views" value={formatCount(totals.views)} />
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Kpi label="Watch (h)" value={formatCount(Math.round(totals.watchHours))} />
         <Kpi label="Avg view" value={formatSeconds(totals.avgDur)} />
         <Kpi label="Avg viewed" value={`${totals.avgPct.toFixed(1)}%`} />
-        <Kpi label="Likes" value={formatCount(totals.likes)} />
-        <Kpi label="Comments" value={formatCount(totals.comments)} />
       </div>
 
       {/* Daily views chart */}
@@ -316,11 +340,20 @@ export default function VideoDetailPage({
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <div className="card p-3">
       <div className="text-xs text-[var(--ink-2)]">{label}</div>
       <div className="mt-1 text-lg font-bold tracking-tight">{value}</div>
+      {sub ? <div className="mt-0.5 text-xs text-[var(--ink-2)]">{sub}</div> : null}
     </div>
   );
 }
