@@ -73,8 +73,14 @@ export type VideoSummary = {
   external_video_id: string;
   title: string | null;
   thumbnail_url: string | null;
+  published_at: string | null;
+  duration_seconds: number | null;
+  content_type: string | null;
   views: number | null;
   watch_time_minutes: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
   subs_gained_from_video: number | null;
   estimated_revenue: number | null;
   impressions: number | null;

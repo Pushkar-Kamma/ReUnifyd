@@ -450,8 +450,6 @@ async def sync_full(
         metrics = [
             "views",
             "estimatedMinutesWatched",
-            "impressions",
-            "impressionsClickThroughRate",
             "subscribersGained",
             "subscribersLost",
             "estimatedRevenue",
@@ -479,7 +477,7 @@ async def sync_full(
 
             for row in rows:
                 day = dt.date.fromisoformat(_get(row, "day"))
-                session.exec(
+                session.execute(
                     sa.text(
                         "DELETE FROM channel_daily_metrics WHERE channel_id = :cid AND date = :d"
                     ),
@@ -494,8 +492,8 @@ async def sync_full(
                         subscribers_lost=int(_get(row, "subscribersLost", 0) or 0),
                         views=int(_get(row, "views", 0) or 0),
                         watch_time_minutes=int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0))),
-                        impressions=int(_get(row, "impressions", 0) or 0),
-                        click_through_rate=float(_get(row, "impressionsClickThroughRate", 0) or 0.0) * 100.0,
+                        impressions=None,
+                        click_through_rate=None,
                         estimated_revenue=float(_get(row, "estimatedRevenue", 0) or 0.0),
                         revenue_currency=None,
                     )
@@ -527,7 +525,7 @@ async def sync_full(
                 day = dt.date.fromisoformat(_get(row, "day"))
                 hour_val = int(_get(row, "hour", 0) or 0)
                 hour_start = dt.datetime.combine(day, dt.time()) + dt.timedelta(hours=hour_val)
-                session.exec(
+                session.execute(
                     sa.text(
                         "DELETE FROM channel_hourly_metrics WHERE channel_id = :cid AND hour_start = :hs"
                     ),
@@ -539,7 +537,7 @@ async def sync_full(
                         hour_start=hour_start,
                         views=int(_get(row, "views", 0) or 0),
                         watch_time_minutes=int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0))),
-                        impressions=int(_get(row, "impressions", 0) or 0),
+                        impressions=None,
                         likes=None,
                         comments=None,
                         subscribers_gained=int(_get(row, "subscribersGained", 0) or 0),
@@ -752,7 +750,7 @@ async def sync_full(
             views = int(_get(row, "views", 0) or 0)
             rev = float(_get(row, "estimatedRevenue", 0) or 0.0)
 
-            session.exec(
+            session.execute(
                 sa.text(
                     "DELETE FROM video_daily_metrics WHERE video_id = :vid AND date = :d"
                 ),
@@ -807,7 +805,7 @@ async def sync_full(
                 if not v:
                     continue
 
-                session.exec(
+                session.execute(
                     sa.text(
                         "DELETE FROM video_daily_metrics WHERE video_id = :vid AND date = :d"
                     ),
@@ -876,7 +874,7 @@ async def sync_full(
                 day = dt.date.fromisoformat(_get(row, "day"))
                 hour_val = int(_get(row, "hour", 0) or 0)
                 hour_start = dt.datetime.combine(day, dt.time()) + dt.timedelta(hours=hour_val)
-                session.exec(
+                session.execute(
                     sa.text(
                         "DELETE FROM video_hourly_metrics WHERE video_id = :vid AND hour_start = :hs"
                     ),
@@ -972,8 +970,12 @@ def videos_summary(
     stmt = sa.text(
         """
         SELECT v.id as video_id, v.external_video_id, v.title, v.thumbnail_url,
-               SUM(m.views) as views,
-               SUM(m.watch_time_minutes) as watch_time_minutes,
+               v.published_at, v.duration_seconds, v.content_type,
+               COALESCE(SUM(m.views), 0) as views,
+               COALESCE(SUM(m.watch_time_minutes), 0) as watch_time_minutes,
+               SUM(COALESCE(m.likes,0)) as likes,
+               SUM(COALESCE(m.comments,0)) as comments,
+               SUM(COALESCE(m.shares,0)) as shares,
                SUM(COALESCE(m.subs_gained_from_video,0)) as subs_gained_from_video,
                SUM(COALESCE(m.estimated_revenue,0)) as estimated_revenue,
                SUM(COALESCE(m.impressions,0)) as impressions,
@@ -983,7 +985,8 @@ def videos_summary(
         FROM video v
         LEFT JOIN video_daily_metrics m ON m.video_id = v.id
         WHERE v.channel_id = :cid AND v.is_active = TRUE
-        GROUP BY v.id, v.external_video_id, v.title, v.thumbnail_url
+        GROUP BY v.id, v.external_video_id, v.title, v.thumbnail_url,
+                 v.published_at, v.duration_seconds, v.content_type
         ORDER BY views DESC
         """
     ).bindparams(sa.bindparam("cid", value=c.id))

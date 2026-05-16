@@ -3,12 +3,43 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { youtube, type VideoSummary } from "@/lib/youtube";
-import { formatCount } from "@/lib/format";
+import { formatCount, relativeTime } from "@/lib/format";
 
-type SortKey = "views" | "watch_time_minutes" | "ctr" | "engagement";
+type SortKey =
+  | "published_at"
+  | "views"
+  | "watch_time_minutes"
+  | "likes"
+  | "comments"
+  | "shares"
+  | "avg_view_duration_seconds";
 type SortDir = "asc" | "desc";
 
 const COLLAPSED = 10;
+
+function engagementRate(v: VideoSummary): number {
+  if (!v.views) return 0;
+  const eng = (v.likes ?? 0) + (v.comments ?? 0) + (v.shares ?? 0);
+  return (eng / v.views) * 100;
+}
+
+function durationLabel(seconds: number | null): string {
+  if (seconds == null) return "—";
+  const s = Math.max(0, Math.round(seconds));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (m < 60) return `${m}:${r.toString().padStart(2, "0")}`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+function avdLabel(seconds: number | null): string {
+  if (seconds == null) return "—";
+  const s = Math.round(seconds);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
 
 export function VideosTable({
   channelId,
@@ -26,6 +57,7 @@ export function VideosTable({
   useEffect(() => {
     let cancelled = false;
     setRows(null);
+    setError(null);
     youtube
       .videosSummary(channelId)
       .then((r) => {
@@ -44,15 +76,20 @@ export function VideosTable({
     if (!rows) return [];
     const get = (v: VideoSummary): number => {
       switch (sortKey) {
+        case "published_at":
+          return v.published_at ? Date.parse(v.published_at) : 0;
         case "views":
           return v.views ?? 0;
         case "watch_time_minutes":
           return v.watch_time_minutes ?? 0;
-        case "ctr":
-          return v.click_through_rate ?? 0;
-        case "engagement":
-          // engagement proxy = avg % viewed (we don't have per-video like/comment in this aggregate)
-          return v.avg_percent_viewed ?? 0;
+        case "likes":
+          return v.likes ?? 0;
+        case "comments":
+          return v.comments ?? 0;
+        case "shares":
+          return v.shares ?? 0;
+        case "avg_view_duration_seconds":
+          return v.avg_view_duration_seconds ?? 0;
       }
     };
     const sign = sortDir === "asc" ? 1 : -1;
@@ -94,6 +131,9 @@ export function VideosTable({
           <thead className="bg-[var(--bg-2)] text-left text-xs uppercase tracking-wide text-[var(--ink-2)]">
             <tr>
               <th className="px-4 py-3">Video</th>
+              <SortHeader k="published_at" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
+                Published
+              </SortHeader>
               <SortHeader k="views" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
                 Views
               </SortHeader>
@@ -105,22 +145,32 @@ export function VideosTable({
               >
                 Watch (h)
               </SortHeader>
-              <SortHeader k="ctr" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
-                CTR
-              </SortHeader>
               <SortHeader
-                k="engagement"
+                k="avg_view_duration_seconds"
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onClick={clickSort}
               >
-                Avg viewed
+                Avg view
               </SortHeader>
+              <SortHeader k="likes" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
+                Likes
+              </SortHeader>
+              <SortHeader k="comments" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
+                Comments
+              </SortHeader>
+              <SortHeader k="shares" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
+                Shares
+              </SortHeader>
+              <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-[var(--ink-2)]">
+                Eng %
+              </th>
             </tr>
           </thead>
           <tbody>
             {visible.map((v) => {
               const ytUrl = `https://www.youtube.com/watch?v=${v.external_video_id}`;
+              const isShort = v.content_type === "short";
               return (
                 <tr key={v.video_id} className="border-t border-[var(--border)]">
                   <td className="px-4 py-3">
@@ -145,7 +195,19 @@ export function VideosTable({
                       <span className="line-clamp-2 max-w-md">
                         {v.title || v.external_video_id}
                       </span>
+                      {isShort ? (
+                        <span className="ml-1 shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                          Short
+                        </span>
+                      ) : v.duration_seconds ? (
+                        <span className="ml-1 shrink-0 text-xs text-[var(--ink-2)]">
+                          {durationLabel(v.duration_seconds)}
+                        </span>
+                      ) : null}
                     </a>
+                  </td>
+                  <td className="px-4 py-3 text-[var(--ink-2)]">
+                    {relativeTime(v.published_at)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
                     {formatCount(v.views ?? 0)}
@@ -154,10 +216,19 @@ export function VideosTable({
                     {formatCount(Math.round((v.watch_time_minutes ?? 0) / 60))}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    {(v.click_through_rate ?? 0).toFixed(1)}%
+                    {avdLabel(v.avg_view_duration_seconds)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    {(v.avg_percent_viewed ?? 0).toFixed(1)}%
+                    {formatCount(v.likes ?? 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {formatCount(v.comments ?? 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {formatCount(v.shares ?? 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {engagementRate(v).toFixed(2)}%
                   </td>
                 </tr>
               );
