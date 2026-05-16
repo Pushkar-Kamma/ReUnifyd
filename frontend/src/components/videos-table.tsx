@@ -134,11 +134,19 @@ export function VideosTable({
               <SortHeader k="comments" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
                 Comments
               </SortHeader>
-              <th
-                className="px-4 py-3 text-right text-xs uppercase tracking-wide text-[var(--ink-2)]"
-                title="Engagement rate = (likes + comments) ÷ views × 100. Industry-standard metric, derived locally."
-              >
-                Eng. rate
+              <th className="px-4 py-3 text-right text-xs uppercase tracking-wide text-[var(--ink-2)]">
+                <span
+                  className="group relative inline-flex cursor-help items-center gap-1"
+                  tabIndex={0}
+                >
+                  Eng. rate
+                  <span className="text-[var(--ink-2)]/80">ⓘ</span>
+                  <span className="pointer-events-none absolute right-0 top-full z-10 mt-2 hidden w-64 rounded-md border border-[var(--border)] bg-white p-2.5 text-left text-xs font-normal normal-case tracking-normal text-[var(--ink-1)] shadow-lg group-hover:block group-focus-within:block">
+                    Engagement rate — industry standard.
+                    <br />
+                    <span className="font-mono">(likes + comments) ÷ views × 100</span>
+                  </span>
+                </span>
               </th>
             </tr>
           </thead>
@@ -235,12 +243,22 @@ function SortHeader({
       <button
         onClick={() => onClick(k)}
         className={[
-          "inline-flex items-center gap-1 text-xs uppercase tracking-wide",
-          active ? "text-[var(--ink-1)]" : "text-[var(--ink-2)]",
+          "group inline-flex items-center gap-1 text-xs uppercase tracking-wide transition",
+          active
+            ? "text-[var(--ink-1)]"
+            : "text-[var(--ink-2)] hover:text-[var(--ink-1)]",
         ].join(" ")}
+        title={`Sort by ${typeof children === "string" ? children : ""}`}
       >
         {children}
-        {active ? <span>{sortDir === "asc" ? "▲" : "▼"}</span> : null}
+        <span
+          className={[
+            "transition",
+            active ? "opacity-100" : "opacity-30 group-hover:opacity-70",
+          ].join(" ")}
+        >
+          {active && sortDir === "asc" ? "▲" : "▼"}
+        </span>
       </button>
     </th>
   );
