@@ -133,6 +133,15 @@ export default function VideoDetailPage({
     };
   }, [series]);
 
+  // Fresh = published less than 7 days ago. Analytics API hasn't fully processed
+  // the data yet, so hide the misleading "via Analytics" subtitles.
+  const isFresh = useMemo(() => {
+    if (!video?.published_at) return false;
+    const d = new Date(video.published_at);
+    if (Number.isNaN(d.getTime())) return false;
+    return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
+  }, [video?.published_at]);
+
   if (loading) {
     return (
       <section className="mx-auto w-[min(1120px,92vw)] py-10">
@@ -202,6 +211,17 @@ export default function VideoDetailPage({
         </div>
       ) : null}
 
+      {isFresh ? (
+        <div
+          className="mb-6 rounded-xl border border-[var(--border)] p-3 text-sm text-[var(--ink-2)]"
+          style={{ background: "rgba(245,158,11,0.08)" }}
+        >
+          ⏳ This video was just published. YouTube Analytics takes 24-48 hours
+          to process viewer data — lifetime stats below are live, but watch time
+          and engagement metrics will fill in tomorrow.
+        </div>
+      ) : null}
+
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Lifetime
       </h2>
@@ -209,22 +229,28 @@ export default function VideoDetailPage({
         <Kpi
           label="Views"
           value={lifetime?.views != null ? formatCount(lifetime.views) : "—"}
-          sub={`${formatCount(totals.views)} in last 180d`}
+          sub={isFresh ? undefined : `${formatCount(totals.views)} via Analytics`}
         />
         <Kpi
           label="Likes"
           value={lifetime?.likes != null ? formatCount(lifetime.likes) : "—"}
-          sub={`${formatCount(totals.likes)} in last 180d`}
+          sub={isFresh ? undefined : `${formatCount(totals.likes)} via Analytics`}
         />
         <Kpi
           label="Comments"
           value={lifetime?.comments != null ? formatCount(lifetime.comments) : "—"}
-          sub={`${formatCount(totals.comments)} in last 180d`}
+          sub={isFresh ? undefined : `${formatCount(totals.comments)} via Analytics`}
         />
       </div>
 
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Last 180 days
+        <span
+          title="Numbers come from the YouTube Analytics API which has a 24-48h processing delay."
+          className="cursor-help text-[var(--ink-2)]/70"
+        >
+          ⓘ
+        </span>
       </h2>
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Kpi label="Watch (h)" value={formatCount(Math.round(totals.watchHours))} />
