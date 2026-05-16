@@ -225,10 +225,6 @@ async def sync_daily(
     if not c:
         raise HTTPException(status_code=404, detail="channel not found")
 
-    # 8-hour guard
-    if c.last_synced_at and (dt.datetime.now(dt.UTC) - c.last_synced_at).total_seconds() < 8 * 3600:
-        return {"ok": True, "skipped": True, "reason": "recently synced"}
-
     try:
         token = await get_valid_access_token_for_channel(request, session, channel_id)
     except RuntimeError as e:

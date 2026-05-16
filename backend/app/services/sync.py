@@ -44,9 +44,6 @@ async def sync_channel_daily(session: Session, channel_id: int, days: int = 30) 
     if not ch.is_active:
         return {"ok": False, "skipped": True, "reason": "inactive", "channel_id": channel_id}
 
-    # 8-hour cool-down to avoid hammering the API on retries
-    if ch.last_synced_at and (dt.datetime.now(dt.UTC) - ch.last_synced_at).total_seconds() < RECENT_SYNC_WINDOW_SECS:
-        return {"ok": True, "skipped": True, "reason": "recently_synced", "channel_id": channel_id}
 
     try:
         token = await get_valid_access_token_for_channel_bg(session, channel_id)
