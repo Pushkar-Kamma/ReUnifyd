@@ -10,7 +10,13 @@ type SortDir = "asc" | "desc";
 
 const COLLAPSED = 10;
 
-export function VideosTable({ channelId }: { channelId: number }) {
+export function VideosTable({
+  channelId,
+  refreshKey,
+}: {
+  channelId: number;
+  refreshKey?: string | number | null;
+}) {
   const [rows, setRows] = useState<VideoSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("views");
@@ -19,6 +25,7 @@ export function VideosTable({ channelId }: { channelId: number }) {
 
   useEffect(() => {
     let cancelled = false;
+    setRows(null);
     youtube
       .videosSummary(channelId)
       .then((r) => {
@@ -31,7 +38,7 @@ export function VideosTable({ channelId }: { channelId: number }) {
     return () => {
       cancelled = true;
     };
-  }, [channelId]);
+  }, [channelId, refreshKey]);
 
   const sorted = useMemo(() => {
     if (!rows) return [];

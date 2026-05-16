@@ -50,6 +50,12 @@ export const youtube = {
       { method: "POST" },
     ),
 
+  syncFull: (channelId: number, days: number = 180) =>
+    api<{ ok: boolean; [k: string]: unknown }>(
+      `/youtube/sync/full?channel_id=${channelId}&days=${days}`,
+      { method: "POST" },
+    ),
+
   timeseries: (channelId: number, days: number = 28) =>
     api<TimeseriesResponse>(
       `/youtube/channel/timeseries?channel_id=${channelId}&days=${days}`,

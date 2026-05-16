@@ -64,6 +64,13 @@ export default function ChannelDetailPage({
     setSyncMsg(null);
     try {
       const r = await youtube.syncDaily(id, 30);
+      // Best-effort: also pull video list + per-video metrics. Errors here
+      // don't fail the whole sync — the daily metrics are already saved.
+      try {
+        await youtube.syncFull(id, 180);
+      } catch {
+        // ignore — videos will populate on next sync
+      }
       if (r.skipped) {
         setSyncMsg(`Skipped: ${r.reason ?? "recently synced"}`);
       } else {
@@ -229,7 +236,7 @@ export default function ChannelDetailPage({
       <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Videos
       </h2>
-      <VideosTable channelId={id} />
+      <VideosTable channelId={id} refreshKey={channel.last_synced_at ?? ""} />
     </section>
   );
 }
