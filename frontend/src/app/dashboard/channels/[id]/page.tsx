@@ -19,6 +19,38 @@ import { VideosTable } from "@/components/videos-table";
 
 const DAYS = 28;
 
+type MetricKey = "views" | "watch_time_minutes" | "subscribers_net" | "estimated_revenue";
+
+const METRICS: Record<
+  MetricKey,
+  { label: string; color: string; format: (v: number) => string; pick: (r: DailyMetric) => number }
+> = {
+  views: {
+    label: "Views",
+    color: "var(--accent)",
+    format: (v) => formatCount(v),
+    pick: (r) => r.views ?? 0,
+  },
+  watch_time_minutes: {
+    label: "Watch time (min)",
+    color: "#8b5cf6",
+    format: (v) => formatCount(v),
+    pick: (r) => r.watch_time_minutes ?? 0,
+  },
+  subscribers_net: {
+    label: "Subscribers (net)",
+    color: "#22c55e",
+    format: (v) => (v >= 0 ? `+${formatCount(v)}` : formatCount(v)),
+    pick: (r) => (r.subscribers_gained ?? 0) - (r.subscribers_lost ?? 0),
+  },
+  estimated_revenue: {
+    label: "Est. revenue",
+    color: "#f59e0b",
+    format: (v) => `$${v.toFixed(2)}`,
+    pick: (r) => r.estimated_revenue ?? 0,
+  },
+};
+
 export default function ChannelDetailPage({
   params,
 }: {
@@ -33,6 +65,7 @@ export default function ChannelDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [metric, setMetric] = useState<MetricKey>("views");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -167,21 +200,37 @@ export default function ChannelDetailPage({
         Last {DAYS} days
       </h2>
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard label="Views" value={formatCount(totals.views)} />
+        <KpiCard
+          label="Views"
+          value={formatCount(totals.views)}
+          active={metric === "views"}
+          onClick={() => setMetric("views")}
+        />
         <KpiCard
           label="Watch time"
           value={`${formatCount(Math.round(totals.watchHours))} h`}
+          active={metric === "watch_time_minutes"}
+          onClick={() => setMetric("watch_time_minutes")}
         />
         <KpiCard
           label="Subscribers"
           value={`${totals.subsNet >= 0 ? "+" : ""}${formatCount(totals.subsNet)}`}
+          active={metric === "subscribers_net"}
+          onClick={() => setMetric("subscribers_net")}
         />
-        <KpiCard label="Est. revenue" value={`$${totals.revenue.toFixed(2)}`} />
+        <KpiCard
+          label="Est. revenue"
+          value={`$${totals.revenue.toFixed(2)}`}
+          active={metric === "estimated_revenue"}
+          onClick={() => setMetric("estimated_revenue")}
+        />
       </div>
 
       <div className="card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-base font-semibold">Daily views</h3>
+          <h3 className="text-base font-semibold">
+            Daily {METRICS[metric].label.toLowerCase()}
+          </h3>
           {!hasData ? (
             <span className="text-xs text-[var(--ink-2)]">
               No data yet — click &ldquo;Sync now&rdquo;
@@ -192,7 +241,7 @@ export default function ChannelDetailPage({
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={series}
+                data={series.map((r) => ({ date: r.date, value: METRICS[metric].pick(r) }))}
                 margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(12,18,28,0.08)" />
@@ -204,11 +253,11 @@ export default function ChannelDetailPage({
                 />
                 <YAxis
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v: number) => formatCount(v)}
+                  tickFormatter={(v: number) => METRICS[metric].format(v)}
                   stroke="var(--ink-2)"
                 />
                 <Tooltip
-                  formatter={(v) => [formatCount(Number(v) || 0), "Views"]}
+                  formatter={(v) => [METRICS[metric].format(Number(v) || 0), METRICS[metric].label]}
                   contentStyle={{
                     borderRadius: 12,
                     border: "1px solid var(--border)",
@@ -217,8 +266,8 @@ export default function ChannelDetailPage({
                 />
                 <Line
                   type="monotone"
-                  dataKey="views"
-                  stroke="var(--accent)"
+                  dataKey="value"
+                  stroke={METRICS[metric].color}
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 4 }}
@@ -241,11 +290,32 @@ export default function ChannelDetailPage({
   );
 }
 
-function KpiCard({ label, value }: { label: string; value: string }) {
+function KpiCard({
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <div className="card p-4">
+    <button
+      onClick={onClick}
+      type="button"
+      className={[
+        "card p-4 text-left transition",
+        active
+          ? "outline outline-2 outline-[var(--accent)]"
+          : onClick
+            ? "hover:-translate-y-0.5 hover:shadow-md"
+            : "",
+      ].join(" ")}
+    >
       <div className="text-xs text-[var(--ink-2)]">{label}</div>
       <div className="mt-1 text-xl font-bold tracking-tight">{value}</div>
-    </div>
+    </button>
   );
 }
