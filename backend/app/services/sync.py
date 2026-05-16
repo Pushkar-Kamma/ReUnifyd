@@ -108,7 +108,7 @@ async def sync_channel_daily(session: Session, channel_id: int, days: int = 30) 
         sl = int(_get(row, "subscribersLost", 0) or 0)
         rev = float(_get(row, "estimatedRevenue", 0) or 0.0)
 
-        session.exec(
+        session.execute(
             sa.text(
                 "DELETE FROM channel_daily_metrics WHERE channel_id = :cid AND date = :d"
             ),
