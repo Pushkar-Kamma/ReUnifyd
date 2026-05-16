@@ -100,7 +100,7 @@ def _compute_expires_at(token: dict) -> dt.datetime | None:
     expires_at = token.get('expires_at')
     if expires_at:
         try:
-            return dt.datetime.utcfromtimestamp(int(expires_at))
+            return dt.datetime.fromtimestamp(int(expires_at, dt.UTC))
         except Exception:
             try:
                 return dt.datetime.fromisoformat(str(expires_at))
@@ -109,7 +109,7 @@ def _compute_expires_at(token: dict) -> dt.datetime | None:
     expires_in = token.get('expires_in')
     if expires_in:
         try:
-            return dt.datetime.utcnow() + dt.timedelta(seconds=int(expires_in))
+            return dt.datetime.now(dt.UTC) + dt.timedelta(seconds=int(expires_in))
         except Exception:
             return None
     return None
@@ -308,7 +308,7 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
             items = []
 
     seen: set[str] = set()
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.UTC)
     for item in items:
         channel_id = item.get("id")
         if not channel_id or channel_id in seen:

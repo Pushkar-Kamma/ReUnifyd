@@ -63,7 +63,7 @@ def _get_cached_access_token(cred: OAuthCredential) -> str | None:
         return None
     # If we have an expiry and it's too close, force refresh
     exp: dt.datetime | None = getattr(cred, "expires_at", None)
-    if exp and (exp - _SKEW) <= dt.datetime.utcnow():
+    if exp and (exp - _SKEW) <= dt.datetime.now(dt.UTC):
         return None
     try:
         return decrypt_str(enc)
@@ -136,14 +136,14 @@ def _persist_tokens_from_refresh(session: Session, cred: OAuthCredential, refres
         raise RuntimeError("Refresh response missing access_token")
 
     # expires_in is typical; some clients may also return absolute timestamps
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.UTC)
     expires_in = refreshed.get("expires_in")
     if isinstance(expires_in, (int, float)):
         cred.expires_at = now + dt.timedelta(seconds=int(expires_in))
     elif "expires_at" in refreshed:
         # try to parse epoch seconds if provided
         try:
-            cred.expires_at = dt.datetime.utcfromtimestamp(int(refreshed["expires_at"]))
+            cred.expires_at = dt.datetime.fromtimestamp(int(refreshed["expires_at"], dt.UTC))
         except Exception:
             cred.expires_at = None
 

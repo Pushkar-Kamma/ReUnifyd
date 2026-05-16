@@ -226,7 +226,7 @@ async def sync_daily(
         raise HTTPException(status_code=404, detail="channel not found")
 
     # 8-hour guard
-    if c.last_synced_at and (dt.datetime.utcnow() - c.last_synced_at).total_seconds() < 8 * 3600:
+    if c.last_synced_at and (dt.datetime.now(dt.UTC) - c.last_synced_at).total_seconds() < 8 * 3600:
         return {"ok": True, "skipped": True, "reason": "recently synced"}
 
     try:
@@ -320,7 +320,7 @@ async def sync_daily(
         )
         inserted += 1
 
-    c.last_synced_at = dt.datetime.utcnow()
+    c.last_synced_at = dt.datetime.now(dt.UTC)
     session.add(c)
     session.commit()
 
@@ -375,7 +375,7 @@ async def sync_full(
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.UTC)
     end_date = dt.date.today()
     start_date = end_date - dt.timedelta(days=max(1, days) - 1)
     hourly_window_days = max(1, min(days, 7))
@@ -925,7 +925,7 @@ async def sync_auto(
     ran = 0
     errors: list[dict] = []
     for c in chans:
-        if not c.last_synced_at or (dt.datetime.utcnow() - c.last_synced_at).total_seconds() > 8 * 3600:
+        if not c.last_synced_at or (dt.datetime.now(dt.UTC) - c.last_synced_at).total_seconds() > 8 * 3600:
             try:
                 await sync_full(channel_id=c.id, days=180, request=request, user_id=user_id, session=session)  # type: ignore
                 ran += 1

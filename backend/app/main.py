@@ -146,7 +146,7 @@ def debug_oauth_config():
         "has_secret": has_secret,
         "redirect_url": redirect_url,
         "cookie_secure": secure_cookie,
-        "cookie_samesite": getattr(settings, "session_same_site", "lax"),
+        "cookie_samesite": settings.SESSION_SAME_SITE,
     }
 
 # --- Serve UI files under /ui (safe) ---

@@ -47,7 +47,7 @@ async def sync_channel_daily(session: Session, channel_id: int, days: int = 30) 
         return {"ok": False, "skipped": True, "reason": "inactive", "channel_id": channel_id}
 
     # 8-hour cool-down to avoid hammering the API on retries
-    if ch.last_synced_at and (dt.datetime.utcnow() - ch.last_synced_at).total_seconds() < RECENT_SYNC_WINDOW_SECS:
+    if ch.last_synced_at and (dt.datetime.now(dt.UTC) - ch.last_synced_at).total_seconds() < RECENT_SYNC_WINDOW_SECS:
         return {"ok": True, "skipped": True, "reason": "recently_synced", "channel_id": channel_id}
 
     try:
@@ -131,7 +131,7 @@ async def sync_channel_daily(session: Session, channel_id: int, days: int = 30) 
         )
         inserted += 1
 
-    ch.last_synced_at = dt.datetime.utcnow()
+    ch.last_synced_at = dt.datetime.now(dt.UTC)
     session.add(ch)
     session.commit()
     return {"ok": True, "inserted_rows": inserted, "channel_id": ch.id}
@@ -142,7 +142,7 @@ async def sync_all_active_channels() -> dict:
 
     Designed to be called by the scheduler. Opens its own DB session.
     """
-    started = dt.datetime.utcnow()
+    started = dt.datetime.now(dt.UTC)
     results: list[dict] = []
     with Session(engine) as session:
         ids = session.exec(
@@ -161,7 +161,7 @@ async def sync_all_active_channels() -> dict:
             res = {"ok": False, "reason": "exception", "detail": str(e), "channel_id": cid}
         results.append(res)
 
-    finished = dt.datetime.utcnow()
+    finished = dt.datetime.now(dt.UTC)
     summary = {
         "started_at": started.isoformat(),
         "finished_at": finished.isoformat(),
