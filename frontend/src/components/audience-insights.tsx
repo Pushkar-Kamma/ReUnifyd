@@ -1,0 +1,280 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import { youtube, type InsightsResponse } from "@/lib/youtube";
+import { formatCount } from "@/lib/format";
+
+const PALETTE = [
+  "var(--accent)",
+  "#8b5cf6",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#06b6d4",
+  "#ec4899",
+  "#84cc16",
+];
+
+const DEVICE_LABEL: Record<string, string> = {
+  DESKTOP: "Desktop",
+  MOBILE: "Mobile",
+  TABLET: "Tablet",
+  TV: "TV",
+  GAME_CONSOLE: "Console",
+  AUTOMOTIVE: "Auto",
+  WEARABLE: "Wearable",
+  UNKNOWN_PLATFORM: "Unknown",
+};
+
+const TRAFFIC_LABEL: Record<string, string> = {
+  YT_SEARCH: "YouTube search",
+  RELATED_VIDEO: "Suggested videos",
+  EXT_URL: "External",
+  NO_LINK_OTHER: "Direct / Other",
+  NO_LINK_EMBEDDED: "Embedded",
+  BROWSE: "Browse features",
+  YT_CHANNEL: "Channel page",
+  SUBSCRIBER: "Subscriptions",
+  NOTIFICATION: "Notifications",
+  PLAYLIST: "Playlist",
+  END_SCREEN: "End screen",
+  SHORTS: "Shorts swipe",
+  HASHTAGS: "Hashtags",
+  ADVERTISING: "Ads",
+  PROMOTED: "Promoted",
+  CAMPAIGN_CARD: "Campaign card",
+  ANNOTATION: "Annotation",
+  YT_OTHER_PAGE: "Other YT page",
+  LIVE_REDIRECT: "Live redirect",
+  PRODUCT_PAGE: "Product page",
+  SOUND_PAGE: "Sound page",
+  VIDEO_REMIXES: "Remixes",
+};
+
+// Pretty country names — small subset; falls back to ISO code.
+const COUNTRY_NAMES = new Intl.DisplayNames(["en"], { type: "region" });
+function countryLabel(code: string | null): string {
+  if (!code || code === "ZZ") return "Unknown";
+  try {
+    return COUNTRY_NAMES.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+export function AudienceInsights({
+  channelId,
+  refreshKey,
+}: {
+  channelId: number;
+  refreshKey?: string | number | null;
+}) {
+  const [data, setData] = useState<InsightsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    setError(null);
+    youtube
+      .insights(channelId, 28)
+      .then((r) => {
+        if (!cancelled) setData(r);
+      })
+      .catch((e) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load insights");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, refreshKey]);
+
+  if (error) {
+    return (
+      <div className="card p-5 text-sm text-red-600" role="alert">
+        {error}
+      </div>
+    );
+  }
+  if (!data) {
+    return <div className="card p-5 text-sm text-[var(--ink-2)]">Loading…</div>;
+  }
+
+  const hasGeo = data.geography.length > 0;
+  const hasDevices = data.devices.length > 0;
+  const hasTraffic = data.traffic_sources.length > 0;
+
+  if (!hasGeo && !hasDevices && !hasTraffic) {
+    return (
+      <div className="card p-5 text-sm text-[var(--ink-2)]">
+        No audience data yet — try Sync now or check back later.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <CountriesCard data={data.geography} />
+      <DevicesCard data={data.devices} />
+      <TrafficCard data={data.traffic_sources} />
+    </div>
+  );
+}
+
+function CountriesCard({
+  data,
+}: {
+  data: Array<{ country: string | null; views: number }>;
+}) {
+  const total = data.reduce((s, r) => s + r.views, 0);
+  return (
+    <div className="card p-5">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Top countries
+      </h3>
+      {data.length === 0 ? (
+        <p className="text-sm text-[var(--ink-2)]">No data.</p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {data.slice(0, 10).map((r) => {
+            const pct = total ? (r.views / total) * 100 : 0;
+            return (
+              <li key={r.country ?? "?"} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>{countryLabel(r.country)}</span>
+                  <span className="tabular-nums text-[var(--ink-2)]">
+                    {formatCount(r.views)} · {pct.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-2)]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${pct}%`,
+                      background: "var(--accent)",
+                    }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DevicesCard({
+  data,
+}: {
+  data: Array<{ device: string | null; views: number }>;
+}) {
+  const chart = data.map((r, i) => ({
+    name: DEVICE_LABEL[r.device ?? "UNKNOWN_PLATFORM"] ?? r.device ?? "Unknown",
+    value: r.views,
+    color: PALETTE[i % PALETTE.length],
+  }));
+  return (
+    <div className="card p-5">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Devices
+      </h3>
+      {data.length === 0 ? (
+        <p className="text-sm text-[var(--ink-2)]">No data.</p>
+      ) : (
+        <div className="h-56 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chart}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={45}
+                outerRadius={75}
+                paddingAngle={2}
+                stroke="white"
+              >
+                {chart.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(v) => [formatCount(Number(v) || 0), "Views"]}
+                contentStyle={{
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  background: "white",
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+            {chart.map((c) => (
+              <li key={c.name} className="flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: c.color }}
+                />
+                <span className="truncate">{c.name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrafficCard({
+  data,
+}: {
+  data: Array<{ source: string | null; views: number }>;
+}) {
+  const sorted = [...data].sort((a, b) => b.views - a.views).slice(0, 8);
+  const total = sorted.reduce((s, r) => s + r.views, 0);
+  return (
+    <div className="card p-5">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Traffic sources
+      </h3>
+      {sorted.length === 0 ? (
+        <p className="text-sm text-[var(--ink-2)]">No data.</p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {sorted.map((r) => {
+            const pct = total ? (r.views / total) * 100 : 0;
+            return (
+              <li key={r.source ?? "?"} className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>
+                    {TRAFFIC_LABEL[r.source ?? ""] ?? r.source ?? "Unknown"}
+                  </span>
+                  <span className="tabular-nums text-[var(--ink-2)]">
+                    {formatCount(r.views)} · {pct.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-2)]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${pct}%`,
+                      background: "#8b5cf6",
+                    }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}

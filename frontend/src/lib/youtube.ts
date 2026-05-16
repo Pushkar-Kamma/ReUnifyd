@@ -66,6 +66,19 @@ export const youtube = {
       ok: true;
       videos: VideoSummary[];
     }>(`/youtube/videos/summary?channel_id=${channelId}`),
+
+  insights: (channelId: number, days: number = 28) =>
+    api<InsightsResponse>(
+      `/youtube/channel/${channelId}/insights?days=${days}`,
+    ),
+};
+
+export type InsightsResponse = {
+  ok: true;
+  days: number;
+  geography: Array<{ country: string | null; views: number }>;
+  devices: Array<{ device: string | null; views: number }>;
+  traffic_sources: Array<{ source: string | null; views: number }>;
 };
 
 export type VideoSummary = {

@@ -16,6 +16,7 @@ import { youtube, type Channel, type DailyMetric } from "@/lib/youtube";
 import { ApiError } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
 import { VideosTable } from "@/components/videos-table";
+import { AudienceInsights } from "@/components/audience-insights";
 
 const DAYS = 28;
 
@@ -281,6 +282,11 @@ export default function ChannelDetailPage({
           </div>
         )}
       </div>
+
+      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Audience
+      </h2>
+      <AudienceInsights channelId={id} refreshKey={channel.last_synced_at ?? ""} />
 
       <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Videos

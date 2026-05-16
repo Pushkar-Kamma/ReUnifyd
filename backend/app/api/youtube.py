@@ -208,6 +208,84 @@ def get_channel(
     }
 
 # ----------------------------
+# Audience insights (live; not stored)
+# ----------------------------
+@router.get("/channel/{channel_id}/insights")
+async def channel_insights(
+    channel_id: int,
+    days: int = 28,
+    request: Request = ...,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Pull aggregate audience insights for the given channel + window:
+    top countries, device-type split, and traffic-source split.
+
+    These are returned live (no caching layer yet) because the payload is tiny.
+    """
+    c = _user_channel(session, user_id, channel_id)
+    if not c:
+        raise HTTPException(status_code=404, detail="channel not found")
+
+    try:
+        token = await get_valid_access_token_for_channel(request, session, channel_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    end = dt.date.today()
+    start = end - dt.timedelta(days=max(1, days) - 1)
+    common = {
+        "ids": f"channel=={c.external_channel_id}",
+        "startDate": start.isoformat(),
+        "endDate": end.isoformat(),
+        "metrics": "views",
+    }
+
+    async def fetch(extra: dict) -> list[dict]:
+        params = {**common, **extra}
+        resp = await _yt_analytics_get(request, token, params)
+        if resp.status_code == 401:
+            new_token = await get_valid_access_token_for_channel(request, session, channel_id)
+            resp = await _yt_analytics_get(request, new_token, params)
+        if resp.status_code >= 400:
+            return []
+        data = resp.json()
+        headers = [h["name"] for h in data.get("columnHeaders", [])]
+        rows = data.get("rows", []) or []
+        return [dict(zip(headers, row, strict=False)) for row in rows]
+
+    async def safe_fetch(extra: dict) -> list[dict]:
+        try:
+            return await fetch(extra)
+        except Exception:
+            return []
+
+    geography = await safe_fetch({
+        "dimensions": "country",
+        "sort": "-views",
+        "maxResults": 10,
+    })
+    devices = await safe_fetch({"dimensions": "deviceType"})
+    traffic = await safe_fetch({"dimensions": "insightTrafficSourceType"})
+
+    return {
+        "ok": True,
+        "days": days,
+        "geography": [
+            {"country": r.get("country"), "views": int(r.get("views") or 0)}
+            for r in geography
+        ],
+        "devices": [
+            {"device": r.get("deviceType"), "views": int(r.get("views") or 0)}
+            for r in devices
+        ],
+        "traffic_sources": [
+            {"source": r.get("insightTrafficSourceType"), "views": int(r.get("views") or 0)}
+            for r in traffic
+        ],
+    }
+
+# ----------------------------
 # Incremental daily sync for a specific channel
 # ----------------------------
 @router.post("/sync/daily")
