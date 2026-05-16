@@ -53,9 +53,10 @@ export function AdBlockerBanner() {
     >
       <div className="mx-auto flex w-[min(1280px,96vw)] items-center justify-between gap-3">
         <span>
-          <strong>Heads up:</strong> An ad blocker or privacy extension looks
-          like it&apos;s blocking ReUnifyd. Please disable it for this site so
-          the app can talk to our API.
+          <strong className="mr-1.5">Heads up:</strong>
+          An ad blocker or privacy extension looks like it&apos;s blocking
+          ReUnifyd. Please disable it for this site so the app can talk to our
+          API.
         </span>
         <button
           onClick={() => {
