@@ -121,7 +121,7 @@ export function AudienceInsights({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch">
       <CountriesCard data={data.geography} />
       <DevicesCard data={data.devices} />
       <TrafficCard data={data.traffic_sources} />
@@ -136,7 +136,7 @@ function CountriesCard({
 }) {
   const total = data.reduce((s, r) => s + r.views, 0);
   return (
-    <div className="card p-5">
+    <div className="card flex h-full flex-col p-5">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Top countries
       </h3>
@@ -149,8 +149,8 @@ function CountriesCard({
             return (
               <li key={r.country ?? "?"} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span>{countryLabel(r.country)}</span>
-                  <span className="tabular-nums text-[var(--ink-2)]">
+                  <span className="truncate pr-2">{countryLabel(r.country)}</span>
+                  <span className="shrink-0 tabular-nums text-[var(--ink-2)]">
                     {formatCount(r.views)} · {pct.toFixed(1)}%
                   </span>
                 </div>
@@ -183,51 +183,53 @@ function DevicesCard({
     color: PALETTE[i % PALETTE.length],
   }));
   return (
-    <div className="card p-5">
+    <div className="card flex h-full flex-col p-5">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Devices
       </h3>
-      {data.length === 0 ? (
+      {chart.length === 0 ? (
         <p className="text-sm text-[var(--ink-2)]">No data.</p>
       ) : (
-        <div className="h-56 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chart}
-                dataKey="value"
-                nameKey="name"
-                innerRadius={45}
-                outerRadius={75}
-                paddingAngle={2}
-                stroke="white"
-              >
-                {chart.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(v) => [formatCount(Number(v) || 0), "Views"]}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid var(--border)",
-                  background: "white",
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        <>
+          <div className="h-44 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chart}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={40}
+                  outerRadius={68}
+                  paddingAngle={2}
+                  stroke="white"
+                >
+                  {chart.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(v) => [formatCount(Number(v) || 0), "Views"]}
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "1px solid var(--border)",
+                    background: "white",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
             {chart.map((c) => (
               <li key={c.name} className="flex items-center gap-1.5">
                 <span
-                  className="inline-block h-2 w-2 rounded-full"
+                  className="inline-block h-2 w-2 shrink-0 rounded-full"
                   style={{ background: c.color }}
                 />
                 <span className="truncate">{c.name}</span>
               </li>
             ))}
           </ul>
-        </div>
+        </>
       )}
     </div>
   );
@@ -241,7 +243,7 @@ function TrafficCard({
   const sorted = [...data].sort((a, b) => b.views - a.views).slice(0, 8);
   const total = sorted.reduce((s, r) => s + r.views, 0);
   return (
-    <div className="card p-5">
+    <div className="card flex h-full flex-col p-5">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Traffic sources
       </h3>
@@ -254,10 +256,10 @@ function TrafficCard({
             return (
               <li key={r.source ?? "?"} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span>
+                  <span className="truncate pr-2">
                     {TRAFFIC_LABEL[r.source ?? ""] ?? r.source ?? "Unknown"}
                   </span>
-                  <span className="tabular-nums text-[var(--ink-2)]">
+                  <span className="shrink-0 tabular-nums text-[var(--ink-2)]">
                     {formatCount(r.views)} · {pct.toFixed(1)}%
                   </span>
                 </div>

@@ -71,6 +71,49 @@ export const youtube = {
     api<InsightsResponse>(
       `/youtube/channel/${channelId}/insights?days=${days}`,
     ),
+
+  video: (videoId: number) =>
+    api<{ ok: true; video: VideoDetail; series: VideoDailySeriesRow[] }>(
+      `/youtube/videos/${videoId}`,
+    ),
+
+  syncVideo: (videoId: number, force = false) =>
+    api<{ ok: boolean; inserted_rows?: number; skipped?: boolean; reason?: string }>(
+      `/youtube/videos/${videoId}/sync${force ? "?force=true" : ""}`,
+      { method: "POST" },
+    ),
+
+  videoRetention: (videoId: number) =>
+    api<{
+      ok: boolean;
+      available: boolean;
+      points: Array<{ t: number; ratio: number; relative: number | null }>;
+    }>(`/youtube/videos/${videoId}/retention`),
+};
+
+export type VideoDetail = {
+  id: number;
+  external_video_id: string;
+  title: string | null;
+  description: string | null;
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
+  published_at: string | null;
+  content_type: string | null;
+  channel_id: number;
+  channel_title: string | null;
+  last_synced_at: string | null;
+};
+
+export type VideoDailySeriesRow = {
+  date: string;
+  views: number;
+  watch_time_minutes: number;
+  avg_view_duration_seconds: number;
+  avg_percent_viewed: number;
+  likes: number;
+  comments: number;
+  shares: number;
 };
 
 export type InsightsResponse = {

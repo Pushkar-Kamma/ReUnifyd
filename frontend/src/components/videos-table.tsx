@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { youtube, type VideoSummary } from "@/lib/youtube";
 import { formatCount, relativeTime } from "@/lib/format";
@@ -153,14 +154,13 @@ export function VideosTable({
           <tbody>
             {visible.map((v) => {
               const ytUrl = `https://www.youtube.com/watch?v=${v.external_video_id}`;
+              const detailHref = `/dashboard/videos/${v.video_id}`;
               const isShort = v.content_type === "short";
               return (
                 <tr key={v.video_id} className="border-t border-[var(--border)]">
                   <td className="px-4 py-3">
-                    <a
-                      href={ytUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      href={detailHref}
                       className="flex items-center gap-3 hover:underline"
                     >
                       {v.thumbnail_url ? (
@@ -187,7 +187,17 @@ export function VideosTable({
                           {durationLabel(v.duration_seconds)}
                         </span>
                       ) : null}
-                    </a>
+                      <a
+                        href={ytUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-auto shrink-0 text-xs text-[var(--ink-2)] hover:text-[var(--accent)] hover:underline"
+                        title="Open on YouTube"
+                      >
+                        ↗
+                      </a>
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-[var(--ink-2)]">
                     {relativeTime(v.published_at)}

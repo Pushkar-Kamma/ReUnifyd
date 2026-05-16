@@ -17,6 +17,7 @@ import { ApiError } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
 import { VideosTable } from "@/components/videos-table";
 import { AudienceInsights } from "@/components/audience-insights";
+import { ContentTypeBreakdown } from "@/components/content-type-breakdown";
 
 const DAYS = 28;
 
@@ -287,6 +288,11 @@ export default function ChannelDetailPage({
         Audience
       </h2>
       <AudienceInsights channelId={id} refreshKey={channel.last_synced_at ?? ""} />
+
+      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Content mix
+      </h2>
+      <ContentTypeBreakdown channelId={id} refreshKey={channel.last_synced_at ?? ""} />
 
       <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Videos

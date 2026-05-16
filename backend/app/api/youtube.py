@@ -43,6 +43,19 @@ def _user_channel(session: Session, user_id: int, channel_id: int) -> Channel | 
         .where(UserChannel.user_id == user_id, Channel.id == channel_id, Channel.is_active == True)
     ).first()
 
+
+def _user_video(session: Session, user_id: int, video_id: int) -> tuple[Video, Channel] | None:
+    """Return (video, channel) if the user is linked to the video's channel."""
+    row = session.exec(
+        select(Video, Channel)
+        .join(Channel, Channel.id == Video.channel_id)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Video.id == video_id, Video.is_active == True)
+    ).first()
+    if not row:
+        return None
+    return row[0], row[1]
+
 async def _yt_analytics_get(request, token: str, params: dict):
     async with httpx.AsyncClient(timeout=30.0) as client:
         return await client.get(
@@ -1170,6 +1183,220 @@ def video_timeseries(
     ).bindparams(vid=v.id, start=start, end=end)
     rows = session.exec(stmt).all()
     return {"ok": True, "series": [dict(r._mapping) for r in rows]}
+
+# ----------------------------
+# Per-video detail (on-demand) — Phase 3.6
+# ----------------------------
+_VIDEO_SYNC_COOLDOWN_SECS = 24 * 3600
+_VIDEO_METRICS = [
+    "views",
+    "estimatedMinutesWatched",
+    "averageViewDuration",
+    "averageViewPercentage",
+    "likes",
+    "comments",
+    "shares",
+    "subscribersGained",
+]
+
+
+@router.get("/videos/{video_id}")
+def get_video(
+    video_id: int,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    pair = _user_video(session, user_id, video_id)
+    if not pair:
+        raise HTTPException(status_code=404, detail="video not found")
+    v, c = pair
+
+    # Last 180 days of daily metrics
+    end = dt.date.today()
+    start = end - dt.timedelta(days=179)
+    stmt = sa.text(
+        """
+        SELECT date, views, watch_time_minutes,
+               COALESCE(avg_view_duration_seconds, 0) AS avg_view_duration_seconds,
+               COALESCE(avg_percent_viewed, 0) AS avg_percent_viewed,
+               COALESCE(likes, 0) AS likes,
+               COALESCE(comments, 0) AS comments,
+               COALESCE(shares, 0) AS shares
+        FROM video_daily_metrics
+        WHERE video_id = :vid AND date BETWEEN :start AND :end
+        ORDER BY date
+        """
+    ).bindparams(vid=v.id, start=start, end=end)
+    series = [dict(r._mapping) for r in session.exec(stmt).all()]
+
+    return {
+        "ok": True,
+        "video": {
+            "id": v.id,
+            "external_video_id": v.external_video_id,
+            "title": v.title,
+            "description": v.description,
+            "thumbnail_url": v.thumbnail_url,
+            "duration_seconds": v.duration_seconds,
+            "published_at": v.published_at,
+            "content_type": v.content_type,
+            "channel_id": c.id,
+            "channel_title": c.title,
+            "last_synced_at": v.last_synced_at,
+        },
+        "series": series,
+    }
+
+
+@router.post("/videos/{video_id}/sync")
+async def sync_video(
+    video_id: int,
+    days: int = 180,
+    force: bool = False,
+    request: Request = ...,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Pull full per-video analytics on demand. Cached for 24h unless force=true."""
+    pair = _user_video(session, user_id, video_id)
+    if not pair:
+        raise HTTPException(status_code=404, detail="video not found")
+    v, c = pair
+
+    now = dt.datetime.now(dt.UTC)
+    if (
+        not force
+        and v.last_synced_at
+        and (now - v.last_synced_at).total_seconds() < _VIDEO_SYNC_COOLDOWN_SECS
+    ):
+        return {"ok": True, "skipped": True, "reason": "recently_synced"}
+
+    try:
+        token = await get_valid_access_token_for_channel(request, session, c.id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    end = dt.date.today()
+    start = end - dt.timedelta(days=max(1, days) - 1)
+
+    params = {
+        "ids": f"channel=={c.external_channel_id}",
+        "startDate": start.isoformat(),
+        "endDate": end.isoformat(),
+        "metrics": ",".join(_VIDEO_METRICS),
+        "dimensions": "day",
+        "filters": f"video=={v.external_video_id}",
+    }
+    resp = await _yt_analytics_get(request, token, params)
+    if resp.status_code == 401:
+        token = await get_valid_access_token_for_channel(request, session, c.id)
+        resp = await _yt_analytics_get(request, token, params)
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text[:500])
+
+    data = resp.json()
+    headers = [h["name"] for h in data.get("columnHeaders", [])]
+    rows = data.get("rows", []) or []
+    idx = {name: i for i, name in enumerate(headers)}
+
+    def _get(row, name, default=None):
+        i = idx.get(name)
+        return row[i] if i is not None and i < len(row) else default
+
+    inserted = 0
+    for row in rows:
+        try:
+            day = dt.date.fromisoformat(_get(row, "day"))
+        except (TypeError, ValueError):
+            continue
+        session.execute(
+            sa.text(
+                "DELETE FROM video_daily_metrics WHERE video_id = :vid AND date = :d"
+            ),
+            {"vid": v.id, "d": day},
+        )
+        session.add(
+            VideoDailyMetrics(
+                video_id=v.id,
+                date=day,
+                views=int(_get(row, "views", 0) or 0),
+                watch_time_minutes=int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0))),
+                avg_view_duration_seconds=int(round(float(_get(row, "averageViewDuration", 0) or 0.0))),
+                avg_percent_viewed=float(_get(row, "averageViewPercentage", 0) or 0.0),
+                likes=int(_get(row, "likes", 0) or 0),
+                comments=int(_get(row, "comments", 0) or 0),
+                shares=int(_get(row, "shares", 0) or 0),
+                subs_gained_from_video=int(_get(row, "subscribersGained", 0) or 0),
+            )
+        )
+        inserted += 1
+
+    v.last_synced_at = now
+    session.add(v)
+    session.commit()
+    return {"ok": True, "inserted_rows": inserted}
+
+
+@router.get("/videos/{video_id}/retention")
+async def video_retention(
+    video_id: int,
+    request: Request,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Pull the YouTube retention curve for a single video (live)."""
+    pair = _user_video(session, user_id, video_id)
+    if not pair:
+        raise HTTPException(status_code=404, detail="video not found")
+    v, c = pair
+
+    try:
+        token = await get_valid_access_token_for_channel(request, session, c.id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    # Retention API needs a date range — use the lifetime of the video
+    end = dt.date.today()
+    start = (v.published_at.date() if v.published_at else end - dt.timedelta(days=365))
+    if start > end:
+        start = end - dt.timedelta(days=1)
+
+    params = {
+        "ids": f"channel=={c.external_channel_id}",
+        "startDate": start.isoformat(),
+        "endDate": end.isoformat(),
+        "metrics": "audienceWatchRatio,relativeRetentionPerformance",
+        "dimensions": "elapsedVideoTimeRatio",
+        "filters": f"video=={v.external_video_id}",
+    }
+    resp = await _yt_analytics_get(request, token, params)
+    if resp.status_code == 401:
+        token = await get_valid_access_token_for_channel(request, session, c.id)
+        resp = await _yt_analytics_get(request, token, params)
+    if resp.status_code >= 400:
+        return {"ok": False, "available": False, "reason": resp.text[:200], "points": []}
+
+    data = resp.json()
+    headers = [h["name"] for h in data.get("columnHeaders", [])]
+    rows = data.get("rows", []) or []
+    idx = {name: i for i, name in enumerate(headers)}
+
+    points = []
+    for row in rows:
+        try:
+            t = float(row[idx["elapsedVideoTimeRatio"]])
+            ratio = float(row[idx["audienceWatchRatio"]])
+        except (KeyError, IndexError, ValueError, TypeError):
+            continue
+        rel = None
+        if "relativeRetentionPerformance" in idx:
+            try:
+                rel = float(row[idx["relativeRetentionPerformance"]])
+            except (ValueError, TypeError):
+                rel = None
+        points.append({"t": t, "ratio": ratio, "relative": rel})
+
+    return {"ok": True, "available": len(points) > 0, "points": points}
 
 # ----------------------------
 # Debug (legacy path): googleaccount status (mapped to new schema)
