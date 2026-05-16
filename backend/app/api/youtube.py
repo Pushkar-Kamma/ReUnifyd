@@ -244,8 +244,6 @@ async def sync_daily(
         "metrics": ",".join([
             "views",
             "estimatedMinutesWatched",
-            "impressions",
-            "impressionsClickThroughRate",
             "subscribersGained",
             "subscribersLost",
             "estimatedRevenue",

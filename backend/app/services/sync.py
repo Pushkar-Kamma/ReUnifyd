@@ -24,8 +24,6 @@ ANALYTICS_METRICS = ",".join(
     [
         "views",
         "estimatedMinutesWatched",
-        "impressions",
-        "impressionsClickThroughRate",
         "subscribersGained",
         "subscribersLost",
         "estimatedRevenue",
