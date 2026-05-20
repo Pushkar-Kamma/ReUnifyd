@@ -1082,6 +1082,205 @@ def videos_summary(
     rows = [dict(r._mapping) for r in q]
     return {"ok": True, "videos": rows}
 
+
+# ----------------------------
+# Aggregated Overview (one round-trip for the dashboard)
+# ----------------------------
+@router.get("/overview")
+def overview(
+    days: int = 28,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Aggregated dashboard for the user's whole account.
+
+    Returns: totals, prior-period totals (for deltas), per-channel time series
+    (one line per channel in the chart), channel leaderboard, top videos mixed.
+    """
+    days = max(1, min(days, 365))
+    end = dt.date.today()
+    start = end - dt.timedelta(days=days - 1)
+    prev_end = start - dt.timedelta(days=1)
+    prev_start = prev_end - dt.timedelta(days=days - 1)
+
+    # Channels the user owns
+    chans = session.exec(
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Channel.is_active == True)  # noqa: E712
+    ).all()
+    if not chans:
+        return {
+            "ok": True,
+            "days": days,
+            "totals": _empty_totals(),
+            "prev_totals": _empty_totals(),
+            "channels": [],
+            "series_by_channel": [],
+            "top_videos": [],
+        }
+    chan_ids = [c.id for c in chans]
+    placeholders = ",".join(f":id{i}" for i in range(len(chan_ids)))
+    bindings = {f"id{i}": cid for i, cid in enumerate(chan_ids)}
+
+    def _totals_for(p_start: dt.date, p_end: dt.date) -> dict:
+        stmt = sa.text(
+            f"""
+            SELECT
+              COALESCE(SUM(views), 0)               AS views,
+              COALESCE(SUM(watch_time_minutes), 0)  AS watch_time_minutes,
+              COALESCE(SUM(subscribers_gained), 0)  AS subs_gained,
+              COALESCE(SUM(subscribers_lost), 0)    AS subs_lost,
+              COALESCE(SUM(estimated_revenue), 0)   AS estimated_revenue
+            FROM channel_daily_metrics
+            WHERE channel_id IN ({placeholders})
+              AND date BETWEEN :start AND :end
+            """
+        ).bindparams(**bindings, start=p_start, end=p_end)
+        row = session.exec(stmt).first()
+        m = dict(row._mapping) if row else {}
+        return {
+            "views": int(m.get("views") or 0),
+            "watch_time_minutes": int(m.get("watch_time_minutes") or 0),
+            "subs_net": int((m.get("subs_gained") or 0) - (m.get("subs_lost") or 0)),
+            "estimated_revenue": float(m.get("estimated_revenue") or 0.0),
+        }
+
+    totals = _totals_for(start, end)
+    prev_totals = _totals_for(prev_start, prev_end)
+
+    # Per-channel time series + per-channel period summary (one query each)
+    series_stmt = sa.text(
+        f"""
+        SELECT channel_id, date,
+               COALESCE(views, 0) AS views,
+               COALESCE(watch_time_minutes, 0) AS watch_time_minutes,
+               COALESCE(subscribers_gained, 0) - COALESCE(subscribers_lost, 0) AS subs_net
+        FROM channel_daily_metrics
+        WHERE channel_id IN ({placeholders})
+          AND date BETWEEN :start AND :end
+        ORDER BY channel_id, date
+        """
+    ).bindparams(**bindings, start=start, end=end)
+    by_chan: dict[int, list[dict]] = {cid: [] for cid in chan_ids}
+    for r in session.exec(series_stmt).all():
+        m = dict(r._mapping)
+        by_chan.setdefault(m["channel_id"], []).append(
+            {
+                "date": m["date"].isoformat() if hasattr(m["date"], "isoformat") else str(m["date"]),
+                "views": int(m["views"] or 0),
+                "watch_time_minutes": int(m["watch_time_minutes"] or 0),
+                "subs_net": int(m["subs_net"] or 0),
+            }
+        )
+
+    # Per-channel period summary
+    sum_stmt = sa.text(
+        f"""
+        SELECT channel_id,
+               COALESCE(SUM(views), 0) AS views,
+               COALESCE(SUM(watch_time_minutes), 0) AS watch_time_minutes,
+               COALESCE(SUM(subscribers_gained), 0) - COALESCE(SUM(subscribers_lost), 0) AS subs_net,
+               COALESCE(SUM(estimated_revenue), 0) AS estimated_revenue
+        FROM channel_daily_metrics
+        WHERE channel_id IN ({placeholders})
+          AND date BETWEEN :start AND :end
+        GROUP BY channel_id
+        """
+    ).bindparams(**bindings, start=start, end=end)
+    period_by_chan: dict[int, dict] = {}
+    for r in session.exec(sum_stmt).all():
+        m = dict(r._mapping)
+        period_by_chan[m["channel_id"]] = {
+            "views": int(m["views"] or 0),
+            "watch_time_minutes": int(m["watch_time_minutes"] or 0),
+            "subs_net": int(m["subs_net"] or 0),
+            "estimated_revenue": float(m["estimated_revenue"] or 0.0),
+        }
+
+    # Prev period per-channel views (for delta %)
+    prev_stmt = sa.text(
+        f"""
+        SELECT channel_id, COALESCE(SUM(views), 0) AS views
+        FROM channel_daily_metrics
+        WHERE channel_id IN ({placeholders})
+          AND date BETWEEN :start AND :end
+        GROUP BY channel_id
+        """
+    ).bindparams(**bindings, start=prev_start, end=prev_end)
+    prev_by_chan: dict[int, int] = {}
+    for r in session.exec(prev_stmt).all():
+        m = dict(r._mapping)
+        prev_by_chan[m["channel_id"]] = int(m["views"] or 0)
+
+    channels_out = []
+    for c in chans:
+        cur = period_by_chan.get(c.id, {"views": 0, "watch_time_minutes": 0, "subs_net": 0, "estimated_revenue": 0.0})
+        prev = prev_by_chan.get(c.id, 0)
+        delta_pct = None
+        if prev > 0:
+            delta_pct = round(((cur["views"] - prev) / prev) * 100.0, 1)
+        channels_out.append(
+            {
+                "id": c.id,
+                "title": c.title,
+                "avatar_url": c.avatar_url,
+                "custom_url": c.custom_url,
+                "subscriber_count": c.subscriber_count,
+                "views": cur["views"],
+                "watch_time_minutes": cur["watch_time_minutes"],
+                "subs_net": cur["subs_net"],
+                "estimated_revenue": cur["estimated_revenue"],
+                "views_delta_pct": delta_pct,
+            }
+        )
+
+    series_by_channel = []
+    for c in chans:
+        series_by_channel.append(
+            {
+                "channel_id": c.id,
+                "title": c.title,
+                "avatar_url": c.avatar_url,
+                "daily": by_chan.get(c.id, []),
+            }
+        )
+
+    # Top videos mixed (last N days) across all channels
+    top_stmt = sa.text(
+        f"""
+        SELECT v.id AS video_id, v.external_video_id, v.title, v.thumbnail_url,
+               v.content_type, v.channel_id, c.title AS channel_title, c.avatar_url AS channel_avatar_url,
+               COALESCE(SUM(m.views), 0) AS views
+        FROM video v
+        JOIN channel c ON c.id = v.channel_id
+        LEFT JOIN video_daily_metrics m
+               ON m.video_id = v.id AND m.date BETWEEN :start AND :end
+        WHERE v.channel_id IN ({placeholders}) AND v.is_active = TRUE
+        GROUP BY v.id, v.external_video_id, v.title, v.thumbnail_url,
+                 v.content_type, v.channel_id, c.title, c.avatar_url
+        HAVING COALESCE(SUM(m.views), 0) > 0
+        ORDER BY views DESC
+        LIMIT 8
+        """
+    ).bindparams(**bindings, start=start, end=end)
+    top_videos = [dict(r._mapping) for r in session.exec(top_stmt).all()]
+
+    return {
+        "ok": True,
+        "days": days,
+        "totals": totals,
+        "prev_totals": prev_totals,
+        "channels": channels_out,
+        "series_by_channel": series_by_channel,
+        "top_videos": top_videos,
+    }
+
+
+def _empty_totals() -> dict:
+    return {"views": 0, "watch_time_minutes": 0, "subs_net": 0, "estimated_revenue": 0.0}
+
+
 # ----------------------------
 # Time series for charts (channel)
 # ----------------------------

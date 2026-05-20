@@ -92,6 +92,63 @@ export const youtube = {
       available: boolean;
       points: Array<{ t: number; ratio: number; relative: number | null }>;
     }>(`/youtube/videos/${videoId}/retention`),
+
+  overview: (days: number = 28) =>
+    api<OverviewResponse>(`/youtube/overview?days=${days}`),
+};
+
+export type OverviewTotals = {
+  views: number;
+  watch_time_minutes: number;
+  subs_net: number;
+  estimated_revenue: number;
+};
+
+export type OverviewChannel = {
+  id: number;
+  title: string | null;
+  avatar_url: string | null;
+  custom_url: string | null;
+  subscriber_count: number | null;
+  views: number;
+  watch_time_minutes: number;
+  subs_net: number;
+  estimated_revenue: number;
+  views_delta_pct: number | null;
+};
+
+export type OverviewSeries = {
+  channel_id: number;
+  title: string | null;
+  avatar_url: string | null;
+  daily: Array<{
+    date: string;
+    views: number;
+    watch_time_minutes: number;
+    subs_net: number;
+  }>;
+};
+
+export type OverviewTopVideo = {
+  video_id: number;
+  external_video_id: string;
+  title: string | null;
+  thumbnail_url: string | null;
+  content_type: string | null;
+  channel_id: number;
+  channel_title: string | null;
+  channel_avatar_url: string | null;
+  views: number;
+};
+
+export type OverviewResponse = {
+  ok: true;
+  days: number;
+  totals: OverviewTotals;
+  prev_totals: OverviewTotals;
+  channels: OverviewChannel[];
+  series_by_channel: OverviewSeries[];
+  top_videos: OverviewTopVideo[];
 };
 
 export type VideoDetail = {
