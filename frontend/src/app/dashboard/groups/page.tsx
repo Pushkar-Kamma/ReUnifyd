@@ -6,6 +6,8 @@ import { groups, type ContentGroupSummary } from "@/lib/groups";
 import { ApiError } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
 import { useToast } from "@/components/toast";
+import { CardSkeleton } from "@/components/skeleton";
+import { EmptyState } from "@/components/empty-state";
 
 type SortKey = "name" | "item_count" | "total_views" | "updated_at";
 
@@ -115,9 +117,19 @@ export default function GroupsPage() {
       {error ? (
         <div className="card p-5 text-sm text-red-600" role="alert">{error}</div>
       ) : items === null ? (
-        <div className="card p-5 text-sm text-[var(--ink-2)]">Loading…</div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
       ) : items.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          icon="📊"
+          title="No content groups yet"
+          description="Create a group and add the same video from multiple channels to see which version performs better."
+          actionLabel="Create your first group"
+          actionHref="/dashboard/groups/new"
+        />
       ) : filteredSorted.length === 0 ? (
         <div className="card p-5 text-sm text-[var(--ink-2)]">
           No groups match &ldquo;{search}&rdquo;.
@@ -178,22 +190,6 @@ function GroupCard({
         className="mt-1 rounded-lg border border-[var(--border)] py-1.5 text-center text-xs font-medium text-[var(--accent)] hover:bg-[var(--bg-2)]"
       >
         View comparison →
-      </Link>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="card p-10 text-center">
-      <div className="mb-3 text-4xl">📊</div>
-      <h2 className="mb-1 text-lg font-semibold">No content groups yet</h2>
-      <p className="mb-5 text-sm text-[var(--ink-2)]">
-        Create a group and add the same video from multiple channels to see which
-        version performs better.
-      </p>
-      <Link href="/dashboard/groups/new" className="btn primary">
-        Create your first group
       </Link>
     </div>
   );

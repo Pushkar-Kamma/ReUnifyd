@@ -7,6 +7,8 @@ import { youtube, type VideoSummary } from "@/lib/youtube";
 import { groups } from "@/lib/groups";
 import { formatCount, relativeTime } from "@/lib/format";
 import { useToast } from "@/components/toast";
+import { TableRowSkeleton } from "@/components/skeleton";
+import { EmptyState } from "@/components/empty-state";
 
 type SortKey =
   | "published_at"
@@ -194,13 +196,25 @@ export function VideosTable({
     );
   }
   if (rows === null) {
-    return <div className="card p-5 text-sm text-[var(--ink-2)]">Loading…</div>;
+    return (
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <tbody>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <TableRowSkeleton key={i} cols={6} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   }
   if (rows.length === 0) {
     return (
-      <div className="card p-5 text-sm text-[var(--ink-2)]">
-        No videos synced for this channel yet.
-      </div>
+      <EmptyState
+        icon="🎬"
+        title="No videos yet"
+        description="Sync this channel to pull in its videos and analytics."
+      />
     );
   }
 
