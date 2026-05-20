@@ -8,6 +8,7 @@ import { apiUrl } from "@/lib/api";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { PeriodSwitcher } from "@/components/period-switcher";
 import { ToastProvider } from "@/components/toast";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -68,6 +69,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <span className="hidden text-[var(--ink-2)] md:inline">
               {user.email}
             </span>
+            <ThemeToggle />
             <button onClick={() => logout()} className="btn">
               Log out
             </button>

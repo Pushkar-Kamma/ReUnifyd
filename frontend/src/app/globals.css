@@ -20,6 +20,24 @@
   --danger: #c00f0c;
 }
 
+html[data-theme="dark"] {
+  --bg: #0f0f0f;
+  --bg-2: #1f1f1f;
+  --bg-3: #181818;
+  --ink-1: #f1f1f1;
+  --ink-2: #aaaaaa;
+  --ink-3: #717171;
+  --accent: #3ea6ff;
+  --accent-2: #65b7ff;
+  --ring: rgba(62, 166, 255, 0.3);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --ok: #22c55e;
+  --warn: #fbbf24;
+  --danger: #ef4444;
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-2: var(--bg-2);
