@@ -113,6 +113,35 @@ export function VideosTable({
 
   const visible = showAll ? sorted : sorted.slice(0, COLLAPSED);
 
+  // Compute anomaly badges within the same content-type cohort (shorts vs long)
+  // using median + MAD (robust to outliers).
+  const anomalies = useMemo(() => {
+    const map = new Map<number, { kind: "spike" | "underperform"; ratio: number }>();
+    if (!rows || rows.length < 5) return map;
+    const cohorts: Record<"short" | "long", VideoSummary[]> = { short: [], long: [] };
+    for (const v of rows) {
+      (v.content_type === "short" ? cohorts.short : cohorts.long).push(v);
+    }
+    for (const cohort of Object.values(cohorts)) {
+      if (cohort.length < 5) continue;
+      const views = cohort.map((v) => v.views ?? 0).sort((a, b) => a - b);
+      const median = views[Math.floor(views.length / 2)];
+      if (median <= 0) continue;
+      const deviations = views.map((x) => Math.abs(x - median)).sort((a, b) => a - b);
+      const mad = deviations[Math.floor(deviations.length / 2)] || median * 0.2;
+      const spikeThresh = median + 2.5 * mad;
+      for (const v of cohort) {
+        const x = v.views ?? 0;
+        if (x >= spikeThresh && x >= median * 1.5) {
+          map.set(v.video_id, { kind: "spike", ratio: x / median });
+        } else if (x > 0 && x <= median * 0.3 && cohort.length >= 8) {
+          map.set(v.video_id, { kind: "underperform", ratio: x / median });
+        }
+      }
+    }
+    return map;
+  }, [rows]);
+
   function clickSort(k: SortKey) {
     if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else {
@@ -376,6 +405,28 @@ export function VideosTable({
                       <span className="line-clamp-2 max-w-md">
                         {v.title || v.external_video_id}
                       </span>
+                      {(() => {
+                        const a = anomalies.get(v.video_id);
+                        if (!a) return null;
+                        if (a.kind === "spike") {
+                          return (
+                            <span
+                              className="ml-1 shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700"
+                              title={`Outperforming cohort by ${a.ratio.toFixed(1)}× the median`}
+                            >
+                              🔥 Spike
+                            </span>
+                          );
+                        }
+                        return (
+                          <span
+                            className="ml-1 shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700"
+                            title={`Underperforming — ${(a.ratio * 100).toFixed(0)}% of the median`}
+                          >
+                            📉 Low
+                          </span>
+                        );
+                      })()}
                       {isShort ? (
                         <span className="ml-1 shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
                           Short
