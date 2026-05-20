@@ -289,6 +289,9 @@ export default function GroupDetailPage({
             ))}
           </div>
 
+          {/* Head-to-head A/B comparison (only for exactly 2 items) */}
+          {items.length === 2 ? <HeadToHead a={items[0]} b={items[1]} /> : null}
+
           {/* Chart + metric picker */}
           <div className="card mb-6 p-5">
             <div className="mb-4 flex items-center justify-between">
@@ -734,3 +737,123 @@ function AddVideoModal({
   );
 }
 
+
+function HeadToHead({ a, b }: { a: ContentGroupItem; b: ContentGroupItem }) {
+  const rate = (it: ContentGroupItem) => engagementRate(it);
+  const rows: Array<{
+    label: string;
+    aVal: number;
+    bVal: number;
+    fmt: (n: number) => string;
+  }> = [
+    { label: "Views", aVal: a.views, bVal: b.views, fmt: (n) => formatCount(n) },
+    { label: "Likes", aVal: a.likes, bVal: b.likes, fmt: (n) => formatCount(n) },
+    { label: "Comments", aVal: a.comments, bVal: b.comments, fmt: (n) => formatCount(n) },
+    {
+      label: "Watch (h)",
+      aVal: (a.watch_time_minutes ?? 0) / 60,
+      bVal: (b.watch_time_minutes ?? 0) / 60,
+      fmt: (n) => n.toFixed(1),
+    },
+    {
+      label: "Engagement %",
+      aVal: rate(a),
+      bVal: rate(b),
+      fmt: (n) => `${n.toFixed(2)}%`,
+    },
+  ];
+
+  return (
+    <div className="card mb-6 p-5">
+      <h2 className="mb-1 text-base font-semibold">Head-to-head</h2>
+      <p className="mb-4 text-xs text-[var(--ink-2)]">
+        Side-by-side delta between the two videos in this group.
+      </p>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 gap-y-2 text-sm">
+        <div className="truncate font-semibold text-right" title={a.title || undefined}>
+          {a.title || "Video A"}
+        </div>
+        <div className="text-center text-xs uppercase tracking-wide text-[var(--ink-3)]">
+          vs
+        </div>
+        <div className="truncate font-semibold" title={b.title || undefined}>
+          {b.title || "Video B"}
+        </div>
+        {rows.map((r) => {
+          const winner: "a" | "b" | "tie" =
+            r.aVal > r.bVal ? "a" : r.bVal > r.aVal ? "b" : "tie";
+          const max = Math.max(r.aVal, r.bVal) || 1;
+          const delta =
+            Math.max(r.aVal, r.bVal) === 0
+              ? 0
+              : ((Math.abs(r.aVal - r.bVal) / Math.max(r.aVal, r.bVal)) * 100);
+          return (
+            <FragmentRow
+              key={r.label}
+              label={r.label}
+              aVal={r.fmt(r.aVal)}
+              bVal={r.fmt(r.bVal)}
+              aBarPct={(r.aVal / max) * 100}
+              bBarPct={(r.bVal / max) * 100}
+              winner={winner}
+              delta={delta}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FragmentRow({
+  label,
+  aVal,
+  bVal,
+  aBarPct,
+  bBarPct,
+  winner,
+  delta,
+}: {
+  label: string;
+  aVal: string;
+  bVal: string;
+  aBarPct: number;
+  bBarPct: number;
+  winner: "a" | "b" | "tie";
+  delta: number;
+}) {
+  return (
+    <>
+      <div className="text-right">
+        <div className={`tabular-nums ${winner === "a" ? "font-semibold text-[var(--ink-1)]" : "text-[var(--ink-2)]"}`}>
+          {aVal}
+        </div>
+        <div className="ml-auto mt-1 h-1.5 max-w-[140px] overflow-hidden rounded-full bg-[var(--bg-2)]">
+          <div
+            className={`ml-auto h-full ${winner === "a" ? "bg-[var(--accent)]" : "bg-[var(--ink-3)]"}`}
+            style={{ width: `${aBarPct}%`, marginLeft: "auto" }}
+          />
+        </div>
+      </div>
+      <div className="px-2 text-center text-xs text-[var(--ink-2)]">
+        <div>{label}</div>
+        {winner !== "tie" && delta > 0 ? (
+          <div className="mt-0.5 text-[10px] text-emerald-600">
+            {winner === "a" ? "←" : "→"} +{delta.toFixed(0)}%
+          </div>
+        ) : null}
+      </div>
+      <div>
+        <div className={`tabular-nums ${winner === "b" ? "font-semibold text-[var(--ink-1)]" : "text-[var(--ink-2)]"}`}>
+          {bVal}
+        </div>
+        <div className="mt-1 h-1.5 max-w-[140px] overflow-hidden rounded-full bg-[var(--bg-2)]">
+          <div
+            className={`h-full ${winner === "b" ? "bg-[var(--accent)]" : "bg-[var(--ink-3)]"}`}
+            style={{ width: `${bBarPct}%` }}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
