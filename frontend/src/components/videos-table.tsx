@@ -60,6 +60,8 @@ export function VideosTable({
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
   const [addingToGroup, setAddingToGroup] = useState(false);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "short" | "long">("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -81,6 +83,13 @@ export function VideosTable({
 
   const sorted = useMemo(() => {
     if (!rows) return [];
+    const needle = search.trim().toLowerCase();
+    const filtered = rows.filter((v) => {
+      if (typeFilter === "short" && v.content_type !== "short") return false;
+      if (typeFilter === "long" && v.content_type === "short") return false;
+      if (needle && !(v.title || "").toLowerCase().includes(needle)) return false;
+      return true;
+    });
     const get = (v: VideoSummary): number => {
       switch (sortKey) {
         case "published_at":
@@ -94,8 +103,8 @@ export function VideosTable({
       }
     };
     const sign = sortDir === "asc" ? 1 : -1;
-    return [...rows].sort((a, b) => sign * (get(a) - get(b)));
-  }, [rows, sortKey, sortDir]);
+    return [...filtered].sort((a, b) => sign * (get(a) - get(b)));
+  }, [rows, sortKey, sortDir, search, typeFilter]);
 
   const visible = showAll ? sorted : sorted.slice(0, COLLAPSED);
 
@@ -187,6 +196,37 @@ export function VideosTable({
 
   return (
     <div className="card overflow-hidden">
+      {/* Search & filter toolbar */}
+      <div className="border-b border-[var(--border)] px-4 py-3 flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search videos by title…"
+          className="flex-1 min-w-[200px] rounded border border-[var(--border)] bg-[var(--bg-1)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+        />
+        <div className="flex gap-1">
+          {(["all", "long", "short"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition ${
+                typeFilter === t
+                  ? "bg-[var(--accent)] text-white"
+                  : "bg-[var(--bg-2)] hover:bg-[var(--bg-1)] text-[var(--ink-2)]"
+              }`}
+            >
+              {t === "all" ? "All" : t === "long" ? "Long" : "Shorts"}
+            </button>
+          ))}
+        </div>
+        {rows && (
+          <span className="text-xs text-[var(--ink-2)] ml-auto">
+            {sorted.length} of {rows.length}
+          </span>
+        )}
+      </div>
+
       {/* Batch action toolbar */}
       {selected.size > 0 && (
         <div className="border-b border-[var(--border)] bg-[var(--bg-2)] px-4 py-3 flex items-center gap-3">
