@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { groups, type ContentGroupSummary } from "@/lib/groups";
 import { ApiError } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
 
+type SortKey = "name" | "item_count" | "total_views" | "updated_at";
+
 export default function GroupsPage() {
   const [items, setItems] = useState<ContentGroupSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("updated_at");
 
   const load = useCallback(async () => {
     setError(null);
@@ -40,6 +44,31 @@ export default function GroupsPage() {
     }
   }
 
+  const filteredSorted = useMemo(() => {
+    if (!items) return [];
+    const needle = search.trim().toLowerCase();
+    const filtered = needle
+      ? items.filter(
+          (g) =>
+            g.name.toLowerCase().includes(needle) ||
+            (g.description || "").toLowerCase().includes(needle),
+        )
+      : items;
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "item_count":
+          return b.item_count - a.item_count;
+        case "total_views":
+          return b.total_views - a.total_views;
+        case "updated_at":
+          return Date.parse(b.updated_at) - Date.parse(a.updated_at);
+      }
+    });
+    return sorted;
+  }, [items, search, sortKey]);
+
   return (
     <section className="mx-auto w-[min(1120px,92vw)] py-8">
       <div className="mb-6 flex items-end justify-between gap-4">
@@ -54,15 +83,45 @@ export default function GroupsPage() {
         </Link>
       </div>
 
+      {/* Search + sort toolbar */}
+      {items && items.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search groups…"
+            className="flex-1 min-w-[200px] rounded border border-[var(--border)] bg-[var(--bg-1)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+          />
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="rounded border border-[var(--border)] bg-[var(--bg-1)] px-3 py-1.5 text-sm"
+          >
+            <option value="updated_at">Recently updated</option>
+            <option value="name">Name (A-Z)</option>
+            <option value="item_count">Most videos</option>
+            <option value="total_views">Most views</option>
+          </select>
+          <span className="text-xs text-[var(--ink-2)]">
+            {filteredSorted.length} of {items.length}
+          </span>
+        </div>
+      )}
+
       {error ? (
         <div className="card p-5 text-sm text-red-600" role="alert">{error}</div>
       ) : items === null ? (
         <div className="card p-5 text-sm text-[var(--ink-2)]">Loading…</div>
       ) : items.length === 0 ? (
         <EmptyState />
+      ) : filteredSorted.length === 0 ? (
+        <div className="card p-5 text-sm text-[var(--ink-2)]">
+          No groups match &ldquo;{search}&rdquo;.
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((g) => (
+          {filteredSorted.map((g) => (
             <GroupCard key={g.id} group={g} onDelete={onDelete} />
           ))}
         </div>
