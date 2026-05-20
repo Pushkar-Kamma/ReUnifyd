@@ -89,6 +89,15 @@ export const groups = {
       },
     ),
 
+  addItemsBatch: (groupId: number, videoIds: number[], note?: string) =>
+    api<{ ok: true; added: number[]; skipped: number[] }>(
+      `/content-groups/${groupId}/items/batch`,
+      {
+        method: "POST",
+        body: JSON.stringify({ video_ids: videoIds, note: note ?? null }),
+      },
+    ),
+
   removeItem: (groupId: number, itemId: number) =>
     api<void>(`/content-groups/${groupId}/items/${itemId}`, {
       method: "DELETE",

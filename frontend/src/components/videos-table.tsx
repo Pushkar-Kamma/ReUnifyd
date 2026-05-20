@@ -4,6 +4,7 @@ import { VideoThumbnail } from "@/components/video-thumbnail";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { youtube, type VideoSummary } from "@/lib/youtube";
+import { groups } from "@/lib/groups";
 import { formatCount, relativeTime } from "@/lib/format";
 
 type SortKey =
@@ -53,6 +54,12 @@ export function VideosTable({
   const [sortKey, setSortKey] = useState<SortKey>("views");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [showAll, setShowAll] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [groupsList, setGroupsList] = useState<Array<{ id: number; name: string }> | null>(null);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
+  const [addingToGroup, setAddingToGroup] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +107,56 @@ export function VideosTable({
     }
   }
 
+  function handleOpenGroupModal() {
+    setGroupsLoading(true);
+    setGroupsError(null);
+    groups
+      .list()
+      .then((r) => {
+        if (r.ok) {
+          setGroupsList(r.groups.map((g) => ({ id: g.id, name: g.name })));
+        }
+      })
+      .catch((e) => {
+        setGroupsError(e instanceof Error ? e.message : "Failed to load groups");
+      })
+      .finally(() => setGroupsLoading(false));
+    setShowGroupModal(true);
+  }
+
+  async function handleAddToGroup(groupId: number) {
+    const videoIds = Array.from(selected);
+    if (videoIds.length === 0) return;
+    setAddingToGroup(true);
+    try {
+      await groups.addItemsBatch(groupId, videoIds);
+      setSelected(new Set());
+      setShowGroupModal(false);
+    } catch (e) {
+      setGroupsError(e instanceof Error ? e.message : "Failed to add videos to group");
+    } finally {
+      setAddingToGroup(false);
+    }
+  }
+
+  function handleSelectAll() {
+    if (selected.size === visible.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(visible.map((v) => v.video_id)));
+    }
+  }
+
+  function handleToggleVideo(videoId: number) {
+    const newSelected = new Set(selected);
+    if (newSelected.has(videoId)) {
+      newSelected.delete(videoId);
+    } else {
+      newSelected.add(videoId);
+    }
+    setSelected(newSelected);
+  }
+
   if (error) {
     return (
       <div className="card p-5 text-sm text-red-600" role="alert">
@@ -120,10 +177,40 @@ export function VideosTable({
 
   return (
     <div className="card overflow-hidden">
+      {/* Batch action toolbar */}
+      {selected.size > 0 && (
+        <div className="border-b border-[var(--border)] bg-[var(--bg-2)] px-4 py-3 flex items-center gap-3">
+          <span className="text-sm text-[var(--ink-2)]">
+            {selected.size} selected
+          </span>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-xs text-[var(--ink-2)] hover:text-[var(--ink-1)] hover:underline"
+          >
+            Clear
+          </button>
+          <button
+            onClick={handleOpenGroupModal}
+            disabled={addingToGroup}
+            className="ml-auto btn-sm"
+            style={{ opacity: addingToGroup ? 0.6 : 1 }}
+          >
+            {addingToGroup ? "Adding…" : "Add to group"}
+          </button>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-[var(--bg-2)] text-left text-xs uppercase tracking-wide text-[var(--ink-2)]">
             <tr>
+              <th className="px-3 py-3 w-12">
+                <input
+                  type="checkbox"
+                  checked={selected.size === visible.length && visible.length > 0}
+                  onChange={handleSelectAll}
+                  className="cursor-pointer"
+                />
+              </th>
               <th className="px-4 py-3">Video</th>
               <SortHeader k="published_at" sortKey={sortKey} sortDir={sortDir} onClick={clickSort}>
                 Published
@@ -160,6 +247,14 @@ export function VideosTable({
               const isShort = v.content_type === "short";
               return (
                 <tr key={v.video_id} className="border-t border-[var(--border)]">
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(v.video_id)}
+                      onChange={() => handleToggleVideo(v.video_id)}
+                      className="cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <Link
                       href={detailHref}
@@ -226,6 +321,48 @@ export function VideosTable({
           </button>
         </div>
       ) : null}
+
+      {/* Group selection modal */}
+      {showGroupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="card max-h-80 w-96 overflow-y-auto p-5">
+            <h3 className="mb-4 text-lg font-semibold">Add to group</h3>
+            {groupsError && (
+              <div className="mb-3 rounded bg-red-100 p-2 text-sm text-red-700">
+                {groupsError}
+              </div>
+            )}
+            {groupsLoading && (
+              <div className="text-sm text-[var(--ink-2)]">Loading groups…</div>
+            )}
+            {groupsList && groupsList.length === 0 && (
+              <div className="text-sm text-[var(--ink-2)]">No groups yet. Create one first.</div>
+            )}
+            {groupsList && groupsList.length > 0 && (
+              <div className="space-y-2">
+                {groupsList.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => void handleAddToGroup(g.id)}
+                    disabled={addingToGroup}
+                    className="w-full rounded border border-[var(--border)] bg-[var(--bg-1)] px-3 py-2 text-sm text-left hover:bg-[var(--bg-2)] disabled:opacity-50"
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setShowGroupModal(false)}
+                className="ml-auto btn-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

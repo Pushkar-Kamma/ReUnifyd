@@ -43,6 +43,11 @@ class GroupItemAdd(BaseModel):
     note: str | None = None
 
 
+class GroupItemAddBatch(BaseModel):
+    video_ids: list[int]
+    note: str | None = None
+
+
 # ---------- helpers ----------
 
 def _own_group_or_404(session: Session, user_id: int, group_id: int) -> ContentGroup:
@@ -309,7 +314,50 @@ def add_item(
     return {"ok": True, "item": {"id": it.id, "video_id": it.video_id}}
 
 
-@router.delete("/{group_id}/items/{item_id}", status_code=204)
+@router.post("/{group_id}/items/batch", status_code=201)
+def add_items_batch(
+    group_id: int,
+    body: GroupItemAddBatch,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Batch add multiple videos to a group. Idempotent: silently skips duplicates."""
+    _own_group_or_404(session, user_id, group_id)
+    if not body.video_ids:
+        return {"ok": True, "added": [], "skipped": []}
+    
+    # Verify user owns all videos
+    owned_ids = set()
+    for vid in body.video_ids:
+        if _user_owns_video(session, user_id, vid):
+            owned_ids.add(vid)
+    
+    added = []
+    skipped = []
+    for video_id in body.video_ids:
+        if video_id not in owned_ids:
+            skipped.append(video_id)
+            continue
+        # Check if already in group
+        existing = session.exec(
+            select(ContentGroupItem).where(
+                ContentGroupItem.content_group_id == group_id,
+                ContentGroupItem.video_id == video_id,
+            )
+        ).first()
+        if existing:
+            skipped.append(video_id)
+            continue
+        it = ContentGroupItem(
+            content_group_id=group_id,
+            video_id=video_id,
+            note=body.note,
+        )
+        session.add(it)
+        added.append(video_id)
+    
+    session.commit()
+    return {"ok": True, "added": added, "skipped": skipped}
 def remove_item(
     group_id: int,
     item_id: int,
