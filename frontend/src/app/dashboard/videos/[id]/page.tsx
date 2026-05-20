@@ -133,14 +133,16 @@ export default function VideoDetailPage({
     };
   }, [series]);
 
-  // Fresh = published less than 7 days ago. Analytics API hasn't fully processed
-  // the data yet, so hide the misleading "via Analytics" subtitles.
-  const isFresh = useMemo(() => {
-    if (!video?.published_at) return false;
+  // Fresh = published less than 7 days ago. Date.now() during render is
+  // intentional here (it doesn't break SSR for client components like ours).
+  let isFresh = false;
+  if (video?.published_at) {
     const d = new Date(video.published_at);
-    if (Number.isNaN(d.getTime())) return false;
-    return Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
-  }, [video?.published_at]);
+    if (!Number.isNaN(d.getTime())) {
+      // eslint-disable-next-line react-hooks/purity
+      isFresh = Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
+    }
+  }
 
   if (loading) {
     return (

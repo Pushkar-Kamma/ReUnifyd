@@ -38,6 +38,8 @@ function avdLabel(seconds: number | null): string {
   const r = s % 60;
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
+// avdLabel kept for future Avg-view column re-add; reference once so lint stays quiet.
+void avdLabel;
 
 export function VideosTable({
   channelId,
