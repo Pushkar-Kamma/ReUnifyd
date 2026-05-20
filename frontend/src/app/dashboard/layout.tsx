@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { apiUrl } from "@/lib/api";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
@@ -14,6 +14,7 @@ import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -44,11 +45,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <header className="nav-bar">
-        <div className="flex items-center justify-between gap-4 px-6 py-2.5">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 text-[var(--ink-1)]"
-          >
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-6 md:gap-4">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Open navigation menu"
+              className="btn md:hidden"
+              onClick={() => setMobileNavOpen(true)}
+            >
+              ☰
+            </button>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 text-[var(--ink-1)]"
+            >
             <span
               className="grid h-8 w-8 place-items-center rounded-md"
               style={{
@@ -63,7 +73,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               ReUnifyd
             </span>
           </Link>
-          <div className="flex items-center gap-3 text-sm">
+          </div>
+          <div className="flex items-center gap-2 text-sm md:gap-3">
             <Suspense fallback={null}>
               <PeriodSwitcher />
             </Suspense>
@@ -78,7 +89,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <div className="flex flex-1">
-        <DashboardSidebar />
+        <DashboardSidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
         <main className="min-w-0 flex-1 bg-[var(--bg-3)]"><ToastProvider><KeyboardShortcuts />{children}</ToastProvider></main>
       </div>
     </>

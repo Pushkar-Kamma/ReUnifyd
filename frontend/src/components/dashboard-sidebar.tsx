@@ -14,7 +14,7 @@ const ICONS = {
   explore: "🔭",
 };
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ mobileOpen = false, onClose }: { mobileOpen?: boolean; onClose?: () => void } = {}) {
   const pathname = usePathname();
   const [channels, setChannels] = useState<Channel[]>([]);
 
@@ -25,11 +25,33 @@ export function DashboardSidebar() {
       .catch(() => setChannels([]));
   }, []);
 
+  // Close drawer on route change
+  useEffect(() => {
+    if (mobileOpen) onClose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-[var(--border)] bg-white md:block">
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={[
+          "w-64 shrink-0 border-r border-[var(--border)] bg-[var(--bg)]",
+          "md:block",
+          mobileOpen
+            ? "fixed inset-y-0 left-0 z-50 block md:static"
+            : "hidden",
+        ].join(" ")}
+      >
       <nav className="sticky top-[57px] flex flex-col gap-0.5 py-3 text-sm">
         <SidebarLink
           href="/dashboard"
@@ -83,6 +105,7 @@ export function DashboardSidebar() {
         ) : null}
       </nav>
     </aside>
+    </>
   );
 }
 
