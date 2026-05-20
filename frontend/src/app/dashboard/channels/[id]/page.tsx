@@ -20,6 +20,7 @@ import { VideoTimeline } from "@/components/video-timeline";
 import { AudienceInsights } from "@/components/audience-insights";
 import { ContentTypeBreakdown } from "@/components/content-type-breakdown";
 import { ChannelHealthScore } from "@/components/channel-health-score";
+import { PostTimeHeatmap } from "@/components/post-time-heatmap";
 
 const DAYS = 28;
 
@@ -336,6 +337,11 @@ export default function ChannelDetailPage({
         Content mix
       </h2>
       <ContentTypeBreakdown channelId={id} refreshKey={channel.last_synced_at ?? ""} />
+
+      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Upload schedule
+      </h2>
+      <PostTimeHeatmap channelId={id} />
 
       <h2 className="mt-10 mb-3 flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Videos
