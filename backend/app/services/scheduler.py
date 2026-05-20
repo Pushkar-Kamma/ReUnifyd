@@ -6,6 +6,11 @@ later we can graduate to Celery/RQ or a separate Render Cron Job.
 Note: On Render's free tier the service spins down after 15 min idle, which can
 delay jobs scheduled at exact times. The job will run on the next wake-up
 instead. For Phase 1 this is acceptable.
+
+Configure the sync time via environment variables:
+  SYNC_HOUR     - hour to run (0-23, default 1)
+  SYNC_MINUTE   - minute to run (0-59, default 0)
+  SYNC_TIMEZONE - IANA timezone name (default America/New_York)
 """
 from __future__ import annotations
 
@@ -37,11 +42,15 @@ def start_scheduler() -> AsyncIOScheduler | None:
         log.info("scheduler disabled via DISABLE_SCHEDULER")
         return None
 
+    sync_hour = int(os.environ.get("SYNC_HOUR", "1"))
+    sync_minute = int(os.environ.get("SYNC_MINUTE", "0"))
+    sync_tz = os.environ.get("SYNC_TIMEZONE", "America/New_York")
+
     sched = AsyncIOScheduler(timezone="UTC")
 
     sched.add_job(
         sync_all_active_channels,
-        trigger=CronTrigger(hour=3, minute=0, timezone="UTC"),
+        trigger=CronTrigger(hour=sync_hour, minute=sync_minute, timezone=sync_tz),
         id="sync_all_active_channels_daily",
         name="Daily YouTube metrics sync",
         replace_existing=True,
@@ -52,7 +61,11 @@ def start_scheduler() -> AsyncIOScheduler | None:
 
     sched.start()
     _scheduler = sched
-    log.info("scheduler started; jobs: %s", [j.id for j in sched.get_jobs()])
+    log.info(
+        "scheduler started; daily sync at %02d:%02d %s; jobs: %s",
+        sync_hour, sync_minute, sync_tz,
+        [j.id for j in sched.get_jobs()],
+    )
     return sched
 
 

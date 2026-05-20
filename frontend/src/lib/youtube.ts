@@ -93,8 +93,11 @@ export const youtube = {
       points: Array<{ t: number; ratio: number; relative: number | null }>;
     }>(`/youtube/videos/${videoId}/retention`),
 
-  overview: (days: number = 28) =>
-    api<OverviewResponse>(`/youtube/overview?days=${days}`),
+  overview: (days: number = 28, channelId?: number) => {
+    const qs = new URLSearchParams({ days: String(days) });
+    if (channelId !== undefined) qs.set("channel_id", String(channelId));
+    return api<OverviewResponse>(`/youtube/overview?${qs.toString()}`);
+  },
 
   explore: (params: ExploreParams) => {
     const qs = new URLSearchParams();

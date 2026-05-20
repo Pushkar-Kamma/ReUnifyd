@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { useDays } from "@/components/period-switcher";
 import { useAuth } from "@/lib/auth-context";
-import { ApiError, apiUrl } from "@/lib/api";
+import { ApiError, api, apiUrl } from "@/lib/api";
 import { formatCount } from "@/lib/format";
 import {
   youtube,
@@ -82,13 +82,24 @@ function OverviewInner() {
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [metric, setMetric] = useState<MetricKey>("views");
+  const [selectedChannelId, setSelectedChannelId] = useState<number | "all">("all");
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  // All channels known so far (persists across channel filter switches)
+  const [allChannels, setAllChannels] = useState<OverviewChannel[]>([]);
 
   const load = useCallback(async () => {
     setError(null);
     setData(null);
     try {
-      const r = await youtube.overview(days);
+      const channelParam = selectedChannelId === "all" ? undefined : selectedChannelId;
+      const r = await youtube.overview(days, channelParam);
       setData(r);
+      // Keep the full channel list for the dropdown (only update when unfiltered)
+      if (selectedChannelId === "all" && r.channels.length > 0) {
+        setAllChannels(r.channels);
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(`Failed to load overview (${err.status}).`);
@@ -96,11 +107,29 @@ function OverviewInner() {
         setError(err instanceof Error ? err.message : "Failed to load overview.");
       }
     }
-  }, [days]);
+  }, [days, selectedChannelId]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function handleSyncAll() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await api<{ ok: boolean; queued: number[]; message: string }>(
+        "/youtube/sync/all",
+        { method: "POST" },
+      );
+      setSyncMsg(`Syncing ${res.queued.length} channel(s) in background. Data will update in ~1 min.`);
+      // Reload after a short delay to pick up fresh data
+      setTimeout(() => { void load(); setSyncMsg(null); }, 60_000);
+    } catch {
+      setSyncMsg("Sync failed — check your connection.");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const chartData = useMemo(() => {
     if (!data) return [];
@@ -163,14 +192,53 @@ function OverviewInner() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Welcome back{user?.name ? `, ${user.name}` : ""}.
-        </h1>
-        <p className="mt-1 text-sm text-[var(--ink-2)]">
-          Across all your channels in the last {data.days} days.
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Welcome back{user?.name ? `, ${user.name}` : ""}.
+          </h1>
+          <p className="mt-1 text-sm text-[var(--ink-2)]">
+            {selectedChannelId === "all"
+              ? `Across all your channels in the last ${data.days} days.`
+              : `Showing ${data.channels[0]?.title ?? "selected channel"} — last ${data.days} days.`}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Channel filter */}
+          {allChannels.length > 1 ? (
+            <select
+              value={selectedChannelId}
+              onChange={(e) =>
+                setSelectedChannelId(e.target.value === "all" ? "all" : Number(e.target.value))
+              }
+              className="rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+            >
+              <option value="all">All channels</option>
+              {allChannels.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title ?? `Channel ${c.id}`}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {/* Sync all button */}
+          <button
+            type="button"
+            onClick={() => void handleSyncAll()}
+            disabled={syncing}
+            className="btn"
+            style={{ opacity: syncing ? 0.6 : 1 }}
+          >
+            {syncing ? "⟳ Syncing…" : "↻ Sync all"}
+          </button>
+        </div>
       </header>
+
+      {syncMsg ? (
+        <div className="mb-4 rounded-lg border border-[var(--border)] bg-[var(--bg-2)] px-4 py-3 text-sm text-[var(--ink-2)]">
+          {syncMsg}
+        </div>
+      ) : null}
 
       {/* KPI strip */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

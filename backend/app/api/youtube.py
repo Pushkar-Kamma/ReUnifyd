@@ -6,7 +6,7 @@ import re
 
 import httpx
 import sqlalchemy as sa
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlmodel import Session, select
 
 from app.api.deps import require_user_id
@@ -297,6 +297,52 @@ async def channel_insights(
             for r in traffic
         ],
     }
+
+# ----------------------------
+# Sync all channels for the current user (background task)
+# ----------------------------
+@router.post("/sync/all")
+async def sync_all_channels(
+    days: int = 30,
+    background_tasks: BackgroundTasks = ...,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Trigger an incremental daily sync for every channel owned by the user.
+
+    Runs in the background so the HTTP response returns immediately.
+    Returns the list of channel IDs that were queued.
+    """
+    from sqlmodel import Session as _Session
+
+    from ..db.core import engine as _engine
+    from ..services.sync import sync_channel_daily
+
+    chans = session.exec(
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Channel.is_active == True)  # noqa: E712
+    ).all()
+
+    if not chans:
+        return {"ok": True, "queued": [], "message": "No channels found"}
+
+    chan_ids = [c.id for c in chans]
+
+    async def _run_sync(channel_ids: list[int]) -> None:
+        import logging as _logging
+        log = _logging.getLogger(__name__)
+        for cid in channel_ids:
+            try:
+                with _Session(_engine) as bg_session:
+                    result = await sync_channel_daily(bg_session, cid, days=days)
+                    log.info("manual sync-all channel %s: %s", cid, result)
+            except Exception:
+                log.exception("manual sync-all failed for channel %s", cid)
+
+    background_tasks.add_task(_run_sync, chan_ids)
+    return {"ok": True, "queued": chan_ids, "message": f"Syncing {len(chan_ids)} channel(s) in background"}
+
 
 # ----------------------------
 # Incremental daily sync for a specific channel
@@ -1089,11 +1135,13 @@ def videos_summary(
 @router.get("/overview")
 async def overview(
     days: int = 28,
+    channel_id: int | None = None,
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
     """Aggregated dashboard for the user's whole account.
 
+    Pass channel_id to restrict to a single channel (must be owned by user).
     Returns: totals, prior-period totals (for deltas), per-channel time series
     (one line per channel in the chart), channel leaderboard, top videos mixed.
     """
@@ -1103,12 +1151,15 @@ async def overview(
     prev_end = start - dt.timedelta(days=1)
     prev_start = prev_end - dt.timedelta(days=days - 1)
 
-    # Channels the user owns
-    chans = session.exec(
+    # Channels the user owns (optionally filtered to one channel)
+    chans_query = (
         select(Channel)
         .join(UserChannel, UserChannel.channel_id == Channel.id)
         .where(UserChannel.user_id == user_id, Channel.is_active == True)  # noqa: E712
-    ).all()
+    )
+    if channel_id is not None:
+        chans_query = chans_query.where(Channel.id == channel_id)
+    chans = session.exec(chans_query).all()
     if not chans:
         return {
             "ok": True,
