@@ -135,6 +135,31 @@ export default function ChannelDetailPage({
     return { views, watchHours: watchMin / 60, subsNet, revenue };
   }, [series]);
 
+  // 30-day projection via linear regression on the selected metric.
+  const projection = useMemo(() => {
+    if (series.length < 7) return null;
+    const ys = series.map((r) => METRICS[metric].pick(r));
+    const n = ys.length;
+    const xs = Array.from({ length: n }, (_, i) => i);
+    const meanX = xs.reduce((a, b) => a + b, 0) / n;
+    const meanY = ys.reduce((a, b) => a + b, 0) / n;
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < n; i++) {
+      num += (xs[i] - meanX) * (ys[i] - meanY);
+      den += (xs[i] - meanX) ** 2;
+    }
+    if (den === 0) return null;
+    const slope = num / den;
+    const intercept = meanY - slope * meanX;
+    let total30 = 0;
+    for (let i = n; i < n + 30; i++) total30 += Math.max(0, intercept + slope * i);
+    const recentAvg = ys.slice(-7).reduce((a, b) => a + b, 0) / Math.min(7, n);
+    const earlyAvg = ys.slice(0, 7).reduce((a, b) => a + b, 0) / Math.min(7, n);
+    const trend = earlyAvg === 0 ? 0 : ((recentAvg - earlyAvg) / earlyAvg) * 100;
+    return { total30, trend };
+  }, [series, metric]);
+
   if (loading) {
     return (
       <section className="mx-auto w-[min(1120px,92vw)] py-10">
@@ -231,13 +256,24 @@ export default function ChannelDetailPage({
       </div>
 
       <div className="card p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-3 flex-wrap">
           <h3 className="text-base font-semibold">
             Daily {METRICS[metric].label.toLowerCase()}
           </h3>
+          {hasData && projection ? (
+            <span
+              className="text-xs text-[var(--ink-2)]"
+              title={`Linear extrapolation from last ${series.length} days. Recent 7d vs first 7d trend: ${projection.trend >= 0 ? "+" : ""}${projection.trend.toFixed(0)}%`}
+            >
+              Projected next 30d: <span className="font-semibold text-[var(--ink-1)]">{METRICS[metric].format(projection.total30)}</span>
+              <span className={projection.trend >= 0 ? "ml-2 text-green-600" : "ml-2 text-red-600"}>
+                {projection.trend >= 0 ? "↗" : "↘"} {projection.trend >= 0 ? "+" : ""}{projection.trend.toFixed(0)}%
+              </span>
+            </span>
+          ) : null}
           {!hasData ? (
             <span className="text-xs text-[var(--ink-2)]">
-              No data yet — click &ldquo;Sync now&rdquo;
+              No data yet — click “Sync now”
             </span>
           ) : null}
         </div>
