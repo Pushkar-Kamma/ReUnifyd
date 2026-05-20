@@ -21,6 +21,7 @@ import { AudienceInsights } from "@/components/audience-insights";
 import { ContentTypeBreakdown } from "@/components/content-type-breakdown";
 import { ChannelHealthScore } from "@/components/channel-health-score";
 import { PostTimeHeatmap } from "@/components/post-time-heatmap";
+import { ChannelGoals } from "@/components/channel-goals";
 
 const DAYS = 28;
 
@@ -342,6 +343,15 @@ export default function ChannelDetailPage({
         Upload schedule
       </h2>
       <PostTimeHeatmap channelId={id} />
+
+      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Goals
+      </h2>
+      <ChannelGoals
+        channelId={id}
+        currentSubscribers={channel.subscriber_count ?? 0}
+        currentViews30d={totals.views}
+      />
 
       <h2 className="mt-10 mb-3 flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Videos
