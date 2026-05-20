@@ -5,6 +5,7 @@ export type ContentGroupSummary = {
   name: string;
   description: string | null;
   item_count: number;
+  total_views: number;
   created_at: string;
   updated_at: string;
 };
@@ -21,12 +22,20 @@ export type ContentGroupItem = {
   channel_id: number;
   channel_title: string | null;
   channel_avatar_url: string | null;
+  subscriber_count: number | null;
+  // Selected period metrics (lifetime when days=0)
   views: number;
   watch_time_minutes: number;
   likes: number;
   comments: number;
   shares: number;
-  impressions: number;
+  // Always lifetime totals regardless of period
+  lifetime_views: number;
+  lifetime_watch_time_minutes: number;
+  lifetime_likes: number;
+  lifetime_comments: number;
+  lifetime_shares: number;
+  lifetime_impressions: number;
 };
 
 export type ContentGroupDetail = {
@@ -51,14 +60,20 @@ export const groups = {
   list: () =>
     api<{ ok: true; groups: ContentGroupSummary[] }>("/content-groups"),
 
-  get: (id: number) =>
-    api<{ ok: true; group: ContentGroupDetail; items: ContentGroupItem[] }>(
-      `/content-groups/${id}`,
+  get: (id: number, days = 0) =>
+    api<{ ok: true; days: number; group: ContentGroupDetail; items: ContentGroupItem[] }>(
+      `/content-groups/${id}?days=${days}`,
     ),
 
   create: (data: { name: string; description?: string }) =>
     api<{ ok: true; group: ContentGroupDetail }>("/content-groups", {
       method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: number, data: { name?: string; description?: string }) =>
+    api<{ ok: true; group: ContentGroupDetail }>(`/content-groups/${id}`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     }),
 
