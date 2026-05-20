@@ -19,6 +19,7 @@ import { VideosTable } from "@/components/videos-table";
 import { VideoTimeline } from "@/components/video-timeline";
 import { AudienceInsights } from "@/components/audience-insights";
 import { ContentTypeBreakdown } from "@/components/content-type-breakdown";
+import { ChannelHealthScore } from "@/components/channel-health-score";
 
 const DAYS = 28;
 
@@ -253,6 +254,10 @@ export default function ChannelDetailPage({
           active={metric === "estimated_revenue"}
           onClick={() => setMetric("estimated_revenue")}
         />
+      </div>
+
+      <div className="mb-8">
+        <ChannelHealthScore channelId={id} series={series} />
       </div>
 
       <div className="card p-5">
