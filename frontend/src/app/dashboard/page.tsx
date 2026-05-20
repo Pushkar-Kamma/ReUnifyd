@@ -506,21 +506,66 @@ function Sortable({
 }
 
 function TopVideosCard({ videos }: { videos: OverviewTopVideo[] }) {
+  const [tab, setTab] = useState<"views" | "engagement" | "newest">("views");
+
+  // Calculate engagement rate for each video
+  const videosWithEngagement = videos.map((v) => ({
+    ...v,
+    engagementRate: v.views > 0 ? ((v.likes + v.comments + v.shares) / v.views) * 100 : 0,
+  }));
+
+  // Sort by different criteria
+  const topByViews = [...videosWithEngagement].sort((a, b) => b.views - a.views).slice(0, 3);
+  const topByEngagement = [...videosWithEngagement]
+    .sort((a, b) => b.engagementRate - a.engagementRate)
+    .slice(0, 3);
+  const topNewest = [...videosWithEngagement]
+    .sort((a, b) => {
+      const aDate = new Date(a.published_at || 0).getTime();
+      const bDate = new Date(b.published_at || 0).getTime();
+      return bDate - aDate;
+    })
+    .slice(0, 3);
+
+  const displayed =
+    tab === "views" ? topByViews : tab === "engagement" ? topByEngagement : topNewest;
+
   return (
     <div className="card overflow-hidden">
       <div className="border-b border-[var(--border)] px-5 py-3">
-        <h2 className="text-base font-semibold">Top videos</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold">Best performers</h2>
+          <div className="flex gap-0.5 rounded-lg border border-[var(--border)] p-0.5 text-xs">
+            {(["views", "engagement", "newest"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={[
+                  "rounded px-2.5 py-1 transition",
+                  tab === t
+                    ? "bg-[var(--accent)] font-medium text-white"
+                    : "text-[var(--ink-2)] hover:bg-[var(--bg-2)]",
+                ].join(" ")}
+              >
+                {t === "views" ? "Views" : t === "engagement" ? "Eng." : "New"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-      {videos.length === 0 ? (
+      {displayed.length === 0 ? (
         <p className="p-5 text-sm text-[var(--ink-2)]">No video activity this period.</p>
       ) : (
         <ul className="divide-y divide-[var(--border)]">
-          {videos.map((v) => (
+          {displayed.map((v, idx) => (
             <li key={v.video_id} className="p-3">
               <Link
                 href={`/dashboard/videos/${v.video_id}`}
-                className="flex items-center gap-3 hover:bg-[var(--bg-2)] -mx-2 rounded-lg px-2 py-1.5"
+                className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-[var(--bg-2)] -mx-2"
               >
+                <span className="shrink-0 w-5 text-center text-xs font-bold text-[var(--accent)]">
+                  #{idx + 1}
+                </span>
                 {v.thumbnail_url ? (
                   <VideoThumbnail
                     src={v.thumbnail_url}
@@ -535,13 +580,23 @@ function TopVideosCard({ videos }: { videos: OverviewTopVideo[] }) {
                   <div className="truncate text-sm font-medium">
                     {v.title || v.external_video_id}
                   </div>
-                  <div className="truncate text-xs text-[var(--ink-2)]">
-                    {v.channel_title}
-                    {v.content_type === "short" ? " · Short" : ""}
+                  <div className="flex items-center gap-1 text-xs text-[var(--ink-2)]">
+                    <span>{v.channel_title}</span>
+                    {v.content_type === "short" && <span>· Short</span>}
                   </div>
                 </div>
-                <div className="shrink-0 text-right text-sm font-semibold tabular-nums">
-                  {formatCount(v.views)}
+                <div className="shrink-0 text-right">
+                  <div className="text-sm font-semibold tabular-nums">{formatCount(v.views)}</div>
+                  <div className="text-xs text-[var(--ink-2)] tabular-nums">
+                    {tab === "engagement"
+                      ? `${v.engagementRate.toFixed(1)}%`
+                      : tab === "newest"
+                        ? new Date(v.published_at || "").toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "views"}
+                  </div>
                 </div>
               </Link>
             </li>

@@ -1297,22 +1297,26 @@ async def overview(
             }
         )
 
-    # Top videos mixed (last N days) across all channels
+    # Top videos mixed (last N days) across all channels — with engagement metrics
     top_stmt = sa.text(
         f"""
         SELECT v.id AS video_id, v.external_video_id, v.title, v.thumbnail_url,
                v.content_type, v.channel_id, c.title AS channel_title, c.avatar_url AS channel_avatar_url,
-               COALESCE(SUM(m.views), 0) AS views
+               v.published_at,
+               COALESCE(SUM(m.views), 0) AS views,
+               COALESCE(SUM(m.likes), 0) AS likes,
+               COALESCE(SUM(m.comments), 0) AS comments,
+               COALESCE(SUM(m.shares), 0) AS shares
         FROM video v
         JOIN channel c ON c.id = v.channel_id
         LEFT JOIN video_daily_metrics m
                ON m.video_id = v.id AND m.date BETWEEN :start AND :end
         WHERE v.channel_id IN ({placeholders}) AND v.is_active = TRUE
         GROUP BY v.id, v.external_video_id, v.title, v.thumbnail_url,
-                 v.content_type, v.channel_id, c.title, c.avatar_url
+                 v.content_type, v.channel_id, c.title, c.avatar_url, v.published_at
         HAVING COALESCE(SUM(m.views), 0) > 0
         ORDER BY views DESC
-        LIMIT 8
+        LIMIT 20
         """
     ).bindparams(**bindings, start=start, end=end)
     top_videos = [dict(r._mapping) for r in session.exec(top_stmt).all()]

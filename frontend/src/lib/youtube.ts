@@ -188,7 +188,11 @@ export type OverviewTopVideo = {
   channel_id: number;
   channel_title: string | null;
   channel_avatar_url: string | null;
+  published_at: string | null;
   views: number;
+  likes: number;
+  comments: number;
+  shares: number;
 };
 
 export type OverviewResponse = {
