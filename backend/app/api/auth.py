@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime as dt
 
 import httpx
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
@@ -218,7 +218,7 @@ async def google_init(request: Request, session: Session = Depends(get_session))
     )
 
 @router.get("/google/callback")
-async def google_callback(request: Request, session: Session = Depends(get_session)):
+async def google_callback(request: Request, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     # Where errors should bounce back to (frontend, with ?oauth_error=...)
     err_redirect = _safe_next_url(request.session.get("post_oauth_next"))
     if (err := request.query_params.get("error")):
@@ -309,6 +309,7 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
 
     seen: set[str] = set()
     now = dt.datetime.now(dt.UTC)
+    new_channel_ids: list[int] = []  # channels created during this OAuth flow
     for item in items:
         channel_id = item.get("id")
         if not channel_id or channel_id in seen:
@@ -363,10 +364,11 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
                 is_monetized=is_monetized,
                 is_active=True,
                 published_at=published_at,
-                last_synced_at=now,
+                last_synced_at=None,  # will be set after first sync
             )
             session.add(ch)
             session.flush()
+            new_channel_ids.append(ch.id)
         else:
             ch.platform_account_id = pa.id
             ch.title = title or ch.title
@@ -392,6 +394,26 @@ async def google_callback(request: Request, session: Session = Depends(get_sessi
         _link_user_channel_owner(session, user.id, ch.id)
 
     session.commit()
+
+    # Auto-sync any channels that were connected for the first time
+    if new_channel_ids:
+        from sqlmodel import Session as _Session
+
+        from ..db.core import engine
+        from ..services.sync import sync_channel_daily
+
+        async def _bg_initial_sync(channel_ids: list[int]) -> None:
+            import logging
+            log = logging.getLogger(__name__)
+            for cid in channel_ids:
+                try:
+                    with _Session(engine) as bg_session:
+                        result = await sync_channel_daily(bg_session, cid, days=90)
+                        log.info("auto-sync new channel %s: %s", cid, result)
+                except Exception:
+                    log.exception("auto-sync failed for new channel %s", cid)
+
+        background_tasks.add_task(_bg_initial_sync, new_channel_ids)
 
     next_url = _safe_next_url(
         request.session.pop("post_oauth_next", None)

@@ -1087,7 +1087,7 @@ def videos_summary(
 # Aggregated Overview (one round-trip for the dashboard)
 # ----------------------------
 @router.get("/overview")
-def overview(
+async def overview(
     days: int = 28,
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
@@ -1306,7 +1306,7 @@ _EXPLORE_GROUP_BY = {"none", "channel", "content_type"}
 
 
 @router.get("/explore")
-def explore(
+async def explore(
     metric: str = "views",
     dimension: str = "time",
     group_by: str = "none",

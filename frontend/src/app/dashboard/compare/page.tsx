@@ -37,6 +37,7 @@ function CompareInner() {
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [normalize, setNormalize] = useState<boolean>(false);
+  const [insights, setInsights] = useState<Map<number, InsightsResponse>>(new Map());
 
   useEffect(() => {
     youtube
@@ -62,6 +63,25 @@ function CompareInner() {
       .filter((c) => selectedIds.has(c.id))
       .map((c, i) => ({ ...c, _color: SERIES_COLORS[i % SERIES_COLORS.length] }));
   }, [overview, selectedIds]);
+
+  // Fetch insights for all selected channels in parallel (not N sequential)
+  useEffect(() => {
+    if (selected.length === 0) return;
+    const ids = selected.map((c) => c.id);
+    void Promise.all(
+      ids.map((id) => youtube.insights(id, 28).then((r) => ({ id, r })).catch(() => null)),
+    ).then((results) => {
+      setInsights((prev) => {
+        const next = new Map(prev);
+        for (const res of results) {
+          if (res) next.set(res.id, res.r);
+        }
+        return next;
+      });
+    });
+  // Only re-fetch when the set of selected channel ids changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected.map((c) => c.id).join(",")]);
 
   const seriesBySelected: OverviewSeries[] = useMemo(() => {
     if (!overview) return [];
@@ -233,7 +253,7 @@ function CompareInner() {
               }}
             >
               {selected.map((c) => (
-                <AudienceMini key={c.id} channel={c} />
+                <AudienceMini key={c.id} channel={c} data={insights.get(c.id) ?? null} />
               ))}
             </div>
           </div>
@@ -349,14 +369,7 @@ function KpiTable({
   );
 }
 
-function AudienceMini({ channel }: { channel: Selected }) {
-  const [data, setData] = useState<InsightsResponse | null>(null);
-  useEffect(() => {
-    youtube
-      .insights(channel.id, 28)
-      .then(setData)
-      .catch(() => setData(null));
-  }, [channel.id]);
+function AudienceMini({ channel, data }: { channel: Selected; data: InsightsResponse | null }) {
 
   return (
     <div className="card p-4">

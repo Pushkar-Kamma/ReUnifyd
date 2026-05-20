@@ -38,6 +38,15 @@ function ChannelsContent() {
     void refresh();
   }, [refresh]);
 
+  // If any channel is still syncing (no last_synced_at), poll every 5s until all are done
+  useEffect(() => {
+    if (!channels) return;
+    const hasPending = channels.some((c) => !c.last_synced_at);
+    if (!hasPending) return;
+    const timer = setTimeout(() => { void refresh(); }, 5000);
+    return () => clearTimeout(timer);
+  }, [channels, refresh]);
+
   return (
     <section className="mx-auto w-[min(1120px,92vw)] py-10">
       <div className="mb-8 flex items-end justify-between gap-4">
@@ -58,7 +67,10 @@ function ChannelsContent() {
           className="mb-6 rounded-xl border border-[var(--border)] p-4 text-sm"
           style={{ background: "rgba(34,197,94,0.08)" }}
         >
-          ✓ YouTube connected. Channels synced below.
+          ✓ YouTube connected. Channels listed below.{" "}
+          <span className="text-[var(--ink-2)]">
+            Data is syncing in the background — views and metrics will appear within a minute.
+          </span>
         </div>
       ) : null}
 
@@ -130,7 +142,9 @@ function ChannelCard({ channel }: { channel: Channel }) {
           <div className="text-lg font-bold">{formatCount(channel.subscriber_count)}</div>
         </div>
         <div className="text-right text-xs text-[var(--ink-2)]">
-          synced {relativeTime(channel.last_synced_at)}
+          {channel.last_synced_at
+            ? `synced ${relativeTime(channel.last_synced_at)}`
+            : <span className="animate-pulse text-amber-600">⟳ syncing…</span>}
         </div>
       </div>
     </Link>

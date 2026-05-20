@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { apiUrl } from "@/lib/api";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { PeriodSwitcher } from "@/components/period-switcher";
 
@@ -16,6 +17,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.replace("/login?next=/dashboard");
     }
   }, [loading, user, router]);
+
+  // Wake the Render backend on first dashboard load to minimize cold-start delay
+  useEffect(() => {
+    void fetch(apiUrl("/health"), {
+      method: "GET",
+      credentials: "omit",
+    }).catch(() => undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
