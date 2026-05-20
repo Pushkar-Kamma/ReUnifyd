@@ -17,6 +17,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+
+    # Real Postgres service so we catch tz / SQL-dialect bugs that SQLite hides
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: reunifyd
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: reunifyd_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,12 +51,23 @@ jobs:
       - name: Ruff (lint)
         run: ruff check .
 
-      - name: Alembic upgrade (SQLite smoke test)
+      - name: Alembic upgrade (Postgres)
         env:
-          DATABASE_URL: sqlite:///./ci.db
+          DATABASE_URL: postgresql://reunifyd:ci@localhost:5432/reunifyd_ci
           GOOGLE_CLIENT_ID: ci-dummy
           GOOGLE_CLIENT_SECRET: ci-dummy
           FERNET_KEY: 0123456789abcdef0123456789abcdef0123456789ab=
           SESSION_SECRET: ci-session-secret
           JWT_SECRET: ci-jwt-secret
         run: alembic upgrade head
+
+      - name: App import smoke (Postgres-backed)
+        env:
+          DATABASE_URL: postgresql://reunifyd:ci@localhost:5432/reunifyd_ci
+          GOOGLE_CLIENT_ID: ci-dummy
+          GOOGLE_CLIENT_SECRET: ci-dummy
+          FERNET_KEY: 0123456789abcdef0123456789abcdef0123456789ab=
+          SESSION_SECRET: ci-session-secret
+          JWT_SECRET: ci-jwt-secret
+        run: |
+          python -c "from app.main import app; print('routes:', len(app.routes))"

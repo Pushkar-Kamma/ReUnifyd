@@ -1,0 +1,51 @@
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  # Also allow manual runs to re-verify production
+  workflow_dispatch:
+
+# Give Vercel/Render a head start before we poke them
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for deploys to settle
+        run: sleep 120
+
+      - name: Wake backend (cold start can take 50s)
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://reunifyd-api.onrender.com/health || true)
+            echo "try $i health=$code"
+            if [ "$code" = "200" ]; then break; fi
+            sleep 20
+          done
+
+      - name: Hit public endpoints (must return 200/401, not 5xx)
+        run: |
+          set -e
+          check() {
+            local url="$1"; local label="$2"; local expect_re="$3"
+            local code
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            echo "$label → $code"
+            if ! echo "$code" | grep -Eq "$expect_re"; then
+              echo "FAIL: $label expected $expect_re got $code"
+              exit 1
+            fi
+          }
+          check https://reunifyd-api.onrender.com/health      health "^200$"
+          check https://reunifyd-api.onrender.com/db/ping     db    "^200$"
+          check https://reunifyd-api.onrender.com/auth/me     me    "^401$"
+          check https://reunifyd-api.onrender.com/youtube/channels  channels "^401$"
+          check https://reunifyd-api.onrender.com/content-groups    groups   "^401$"
+          check https://reunifyd-api.onrender.com/youtube/explore   explore  "^401$"
+          check https://reunifyd-api.onrender.com/youtube/overview  overview "^401$"
+
+      - name: Hit frontend root
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" https://reunifyd.vercel.app)
+          echo "frontend root → $code"
+          if [ "$code" != "200" ]; then exit 1; fi

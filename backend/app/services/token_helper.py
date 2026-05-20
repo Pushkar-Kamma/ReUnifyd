@@ -143,7 +143,9 @@ def _persist_tokens_from_refresh(session: Session, cred: OAuthCredential, refres
     elif "expires_at" in refreshed:
         # try to parse epoch seconds if provided
         try:
-            cred.expires_at = dt.datetime.fromtimestamp(int(refreshed["expires_at"], dt.UTC))
+            cred.expires_at = dt.datetime.fromtimestamp(
+                int(refreshed["expires_at"]), dt.UTC
+            )
         except Exception:
             cred.expires_at = None
 

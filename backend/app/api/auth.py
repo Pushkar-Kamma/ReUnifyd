@@ -100,7 +100,7 @@ def _compute_expires_at(token: dict) -> dt.datetime | None:
     expires_at = token.get('expires_at')
     if expires_at:
         try:
-            return dt.datetime.fromtimestamp(int(expires_at, dt.UTC))
+            return dt.datetime.fromtimestamp(int(expires_at), dt.UTC)
         except Exception:
             try:
                 return dt.datetime.fromisoformat(str(expires_at))

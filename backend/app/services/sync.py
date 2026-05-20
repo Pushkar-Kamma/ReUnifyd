@@ -50,7 +50,7 @@ async def sync_channel_daily(session: Session, channel_id: int, days: int = 30) 
     except RuntimeError as e:
         return {"ok": False, "skipped": True, "reason": "auth", "detail": str(e), "channel_id": channel_id}
 
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=max(1, days) - 1)
 
     params = {

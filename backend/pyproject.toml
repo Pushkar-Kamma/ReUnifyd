@@ -4,20 +4,23 @@ target-version = "py312"
 extend-exclude = ["alembic/versions", "legacy"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP"]
+select = ["E", "F", "W", "I", "B", "UP", "DTZ"]
 # E501: line length handled by formatter
 # B008: FastAPI uses `Depends()` in defaults — idiomatic
 # B904: from-cause not always necessary
 # E712: SQLAlchemy uses `== True` for column comparisons
 # UP038: `isinstance(x, (A, B))` is fine pre-3.10
+# DTZ001/DTZ005/DTZ006: bans `datetime()` / `now()` / `utcnow()` without tz
 ignore = ["E501", "B008", "B904", "E712", "UP038"]
 
 [tool.ruff.lint.per-file-ignores]
 # Throwaway maintenance scripts predate the lint config
-"drop_schema.py" = ["E701"]
-"cleandb.py" = ["E701"]
+"drop_schema.py" = ["E701", "DTZ"]
+"cleandb.py" = ["E701", "DTZ"]
 # Loop-variable-binding in async closures used for try/except retry blocks
 "app/api/youtube.py" = ["B023"]
+# Migration scripts may use plain datetimes
+"alembic/**" = ["DTZ"]
 
 [tool.ruff.format]
 quote-style = "double"

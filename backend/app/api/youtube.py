@@ -245,7 +245,7 @@ async def channel_insights(
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=max(1, days) - 1)
     common = {
         "ids": f"channel=={c.external_channel_id}",
@@ -321,7 +321,7 @@ async def sync_daily(
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=max(1, days) - 1)
 
     params = {
@@ -461,7 +461,7 @@ async def sync_full(
         raise HTTPException(status_code=401, detail=str(e))
 
     now = dt.datetime.now(dt.UTC)
-    end_date = dt.date.today()
+    end_date = dt.datetime.now(dt.UTC).date()
     start_date = end_date - dt.timedelta(days=max(1, days) - 1)
     hourly_window_days = max(1, min(days, 7))
     hourly_start_date = end_date - dt.timedelta(days=hourly_window_days - 1)
@@ -1098,7 +1098,7 @@ def overview(
     (one line per channel in the chart), channel leaderboard, top videos mixed.
     """
     days = max(1, min(days, 365))
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=days - 1)
     prev_end = start - dt.timedelta(days=1)
     prev_start = prev_end - dt.timedelta(days=days - 1)
@@ -1331,7 +1331,7 @@ def explore(
         raise HTTPException(status_code=400, detail=f"unknown group_by: {group_by}")
 
     days = max(1, min(days, 365))
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=days - 1)
 
     # User-owned channels
@@ -1519,7 +1519,7 @@ def channel_timeseries(
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=max(1, days) - 1)
 
     if all:
@@ -1595,7 +1595,7 @@ def video_timeseries(
     if not v:
         raise HTTPException(status_code=404, detail="video not found")
 
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=max(1, days) - 1)
     stmt = sa.text(
         """
@@ -1639,7 +1639,7 @@ async def get_video(
     v, c = pair
 
     # Last 180 days of daily metrics
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=179)
     stmt = sa.text(
         """
@@ -1727,7 +1727,7 @@ async def sync_video(
     except RuntimeError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=max(1, days) - 1)
 
     params = {
@@ -1807,7 +1807,7 @@ async def video_retention(
         raise HTTPException(status_code=401, detail=str(e))
 
     # Retention API needs a date range — use the lifetime of the video
-    end = dt.date.today()
+    end = dt.datetime.now(dt.UTC).date()
     start = (v.published_at.date() if v.published_at else end - dt.timedelta(days=365))
     if start > end:
         start = end - dt.timedelta(days=1)
