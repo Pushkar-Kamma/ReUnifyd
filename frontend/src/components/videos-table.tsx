@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { youtube, type VideoSummary } from "@/lib/youtube";
 import { groups } from "@/lib/groups";
 import { formatCount, relativeTime } from "@/lib/format";
+import { downloadCsv, downloadJson } from "@/lib/export";
 import { useToast } from "@/components/toast";
 import { TableRowSkeleton } from "@/components/skeleton";
 import { EmptyState } from "@/components/empty-state";
@@ -249,6 +250,38 @@ export function VideosTable({
             {sorted.length} of {rows.length}
           </span>
         )}
+        <div className="flex gap-1">
+          <button
+            onClick={() => {
+              const exportRows = sorted.map((v) => ({
+                title: v.title || v.external_video_id,
+                video_id: v.external_video_id,
+                published_at: v.published_at || "",
+                content_type: v.content_type || "",
+                views: v.views ?? 0,
+                likes: v.likes ?? 0,
+                comments: v.comments ?? 0,
+                engagement_rate_pct: engagementRate(v).toFixed(2),
+              }));
+              downloadCsv(`videos-channel-${channelId}.csv`, exportRows);
+              toast(`Exported ${exportRows.length} rows to CSV`, "success");
+            }}
+            className="text-xs rounded border border-[var(--border)] bg-[var(--bg-1)] px-2 py-1.5 hover:bg-[var(--bg-2)]"
+            title="Download visible rows as CSV"
+          >
+            ↓ CSV
+          </button>
+          <button
+            onClick={() => {
+              downloadJson(`videos-channel-${channelId}.json`, sorted);
+              toast(`Exported ${sorted.length} rows to JSON`, "success");
+            }}
+            className="text-xs rounded border border-[var(--border)] bg-[var(--bg-1)] px-2 py-1.5 hover:bg-[var(--bg-2)]"
+            title="Download visible rows as JSON"
+          >
+            ↓ JSON
+          </button>
+        </div>
       </div>
 
       {/* Batch action toolbar */}
