@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { VideoThumbnail } from "@/components/video-thumbnail";
 import {

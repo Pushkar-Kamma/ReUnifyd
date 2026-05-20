@@ -153,22 +153,6 @@ function CompareInner() {
             ⭐ Top 5
           </button>
           <button
-            onClick={() => {
-              if (!overview) return;
-              setSelectedIds(
-                new Set(
-                  overview.channels
-                    .sort((a, b) => b.views - a.views)
-                    .slice(0, 5)
-                    .map((c) => c.id),
-                ),
-              );
-            }}
-            className="btn-sm text-xs"
-          >
-            🔄 All
-          </button>
-          <button
             onClick={() => setSelectedIds(new Set())}
             className="btn-sm text-xs"
           >

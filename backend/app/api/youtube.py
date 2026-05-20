@@ -755,7 +755,6 @@ async def sync_full(
             break
 
     async def enrich_videos(video_ids: list[str]) -> None:
-        nonlocal token
         if not video_ids:
             return
         for i in range(0, len(video_ids), 50):

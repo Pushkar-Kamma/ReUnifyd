@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { youtube, type Channel, type DailyMetric } from "@/lib/youtube";
+import { youtube, type Channel, type DailyMetric, type VideoSummary } from "@/lib/youtube";
 import { ApiError } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
 import { VideosTable } from "@/components/videos-table";
@@ -337,7 +337,7 @@ function VideoTimelineWrapper({
   channelId: number;
   refreshKey?: string | number | null;
 }) {
-  const [videos, setVideos] = useState<any[] | null>(null);
+  const [videos, setVideos] = useState<VideoSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

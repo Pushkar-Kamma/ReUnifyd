@@ -157,6 +157,16 @@ export function VideosTable({
     setSelected(newSelected);
   }
 
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!showGroupModal) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowGroupModal(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showGroupModal]);
+
   if (error) {
     return (
       <div className="card p-5 text-sm text-red-600" role="alert">
@@ -324,9 +334,17 @@ export function VideosTable({
 
       {/* Group selection modal */}
       {showGroupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowGroupModal(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="group-modal-title"
+        >
           <div className="card max-h-80 w-96 overflow-y-auto p-5">
-            <h3 className="mb-4 text-lg font-semibold">Add to group</h3>
+            <h3 id="group-modal-title" className="mb-4 text-lg font-semibold">Add to group</h3>
             {groupsError && (
               <div className="mb-3 rounded bg-red-100 p-2 text-sm text-red-700">
                 {groupsError}

@@ -17,22 +17,25 @@ export function VideoTimeline({ videos }: { videos: VideoSummary[] }) {
     );
   }
 
-  // Sort by publish date (oldest first for left-to-right chronological view)
-  const sorted = [...videos].sort((a, b) => {
-    const aDate = a.published_at ? Date.parse(a.published_at) : 0;
-    const bDate = b.published_at ? Date.parse(b.published_at) : 0;
-    return aDate - bDate;
-  });
+  // Filter to videos with valid publish dates and sort chronologically
+  const sorted = [...videos]
+    .filter((v) => v.published_at)
+    .sort((a, b) => Date.parse(a.published_at!) - Date.parse(b.published_at!));
 
-  // Calculate min/max dates for scaling
-  const dates = sorted
-    .map((v) => (v.published_at ? Date.parse(v.published_at) : null))
-    .filter((d) => d !== null) as number[];
+  if (sorted.length === 0) {
+    return (
+      <div className="card p-8 text-center text-sm text-[var(--ink-2)]">
+        No videos with publish dates available.
+      </div>
+    );
+  }
+
+  const dates = sorted.map((v) => Date.parse(v.published_at!));
   const minDate = Math.min(...dates);
   const maxDate = Math.max(...dates);
   const dateRange = maxDate - minDate || 1;
 
-  // Find max views for height scaling
+  // Find max views for height scaling (clamp to 1 to avoid division by zero)
   const maxViews = Math.max(...sorted.map((v) => v.views ?? 0), 1);
 
   return (
@@ -62,7 +65,7 @@ export function VideoTimeline({ videos }: { videos: VideoSummary[] }) {
         {/* Videos positioned on timeline */}
         <div className="space-y-3">
           {sorted.map((video) => {
-            const pubDate = video.published_at ? Date.parse(video.published_at) : minDate;
+            const pubDate = Date.parse(video.published_at!);
             const position = ((pubDate - minDate) / dateRange) * 100;
             const barHeight = (video.views ?? 0) / maxViews * 100;
             const isHovered = hovered === video.video_id;

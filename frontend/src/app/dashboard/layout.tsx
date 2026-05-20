@@ -24,7 +24,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       method: "GET",
       credentials: "omit",
     }).catch(() => undefined);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {

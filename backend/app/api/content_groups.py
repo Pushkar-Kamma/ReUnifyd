@@ -358,6 +358,9 @@ def add_items_batch(
     
     session.commit()
     return {"ok": True, "added": added, "skipped": skipped}
+
+
+@router.delete("/{group_id}/items/{item_id}", status_code=204)
 def remove_item(
     group_id: int,
     item_id: int,
