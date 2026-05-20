@@ -12,6 +12,7 @@ const ICONS = {
   channels: "📺",
   groups: "🔗",
   explore: "🔭",
+  sync: "↻",
 };
 
 export function DashboardSidebar({ mobileOpen = false, onClose }: { mobileOpen?: boolean; onClose?: () => void } = {}) {
@@ -87,6 +88,13 @@ export function DashboardSidebar({ mobileOpen = false, onClose }: { mobileOpen?:
           icon={ICONS.explore}
         >
           Advanced mode
+        </SidebarLink>
+        <SidebarLink
+          href="/dashboard/sync"
+          active={isActive("/dashboard/sync")}
+          icon={ICONS.sync}
+        >
+          Sync status
         </SidebarLink>
 
         {channels.length > 0 ? (
