@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { PeriodSwitcher } from "@/components/period-switcher";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -31,35 +32,41 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <header className="nav-bar">
-        <div className="mx-auto flex w-[min(1280px,96vw)] items-center justify-between gap-4 py-3">
+        <div className="flex items-center justify-between gap-4 px-6 py-2.5">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2.5 text-[var(--ink-1)]"
+            className="flex items-center gap-2 text-[var(--ink-1)]"
           >
             <span
-              className="grid h-[34px] w-[34px] place-items-center rounded-[10px]"
+              className="grid h-8 w-8 place-items-center rounded-md"
               style={{
                 background:
                   "radial-gradient(100% 100% at 50% 0%, #fefefe 0%, #e6eaee 100%)",
-                boxShadow:
-                  "inset 0 0 0 1px var(--border), 0 10px 20px rgba(0,0,0,.04)",
+                boxShadow: "inset 0 0 0 1px var(--border)",
               }}
             >
               <span className="text-sm font-bold">R</span>
             </span>
-            <span className="font-bold tracking-wide">ReUnifyd</span>
+            <span className="text-base font-semibold tracking-tight">
+              ReUnifyd
+            </span>
           </Link>
-          <nav className="flex items-center gap-3 text-sm">
-            <span className="text-[var(--ink-2)]">{user.email}</span>
+          <div className="flex items-center gap-3 text-sm">
+            <Suspense fallback={null}>
+              <PeriodSwitcher />
+            </Suspense>
+            <span className="hidden text-[var(--ink-2)] md:inline">
+              {user.email}
+            </span>
             <button onClick={() => logout()} className="btn">
               Log out
             </button>
-          </nav>
+          </div>
         </div>
       </header>
-      <div className="mx-auto flex w-[min(1280px,96vw)] flex-1 gap-6">
+      <div className="flex flex-1">
         <DashboardSidebar />
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1 bg-[var(--bg-3)]">{children}</main>
       </div>
     </>
   );

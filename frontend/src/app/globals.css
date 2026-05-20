@@ -1,20 +1,23 @@
 @import "tailwindcss";
 
 /* =============================================================
-   ReUnifyd theme tokens (ported from legacy/home.css)
+   ReUnifyd theme — YT Studio inspired (clean, white, minimal)
    ============================================================= */
 :root {
-  --bg: #f5f6f7;
-  --bg-2: #eef0f2;
-  --ink-1: #0f1115;
-  --ink-2: #4b4f58;
-  --accent: #3a77ff;
-  --accent-2: #8aa4ff;
-  --ring: rgba(58, 119, 255, 0.35);
-  --glass: rgba(255, 255, 255, 0.55);
-  --border: rgba(12, 18, 28, 0.06);
-  --ok: #22c55e;
+  --bg: #ffffff;
+  --bg-2: #f4f4f5;          /* subtle gray for headers, hover */
+  --bg-3: #fafafa;          /* page background */
+  --ink-1: #0f0f0f;          /* near-black, YT body */
+  --ink-2: #606060;          /* YT secondary text */
+  --ink-3: #909090;          /* tertiary / icons */
+  --accent: #065fd4;         /* YT studio blue */
+  --accent-2: #1c83f5;
+  --ring: rgba(6, 95, 212, 0.25);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --ok: #16a34a;
   --warn: #f59e0b;
+  --danger: #c00f0c;
 }
 
 @theme inline {
@@ -24,8 +27,8 @@
   --color-ink-2: var(--ink-2);
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
-  --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI",
-    Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-inter), "Inter", Roboto, system-ui, -apple-system,
+    "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 html,
@@ -37,93 +40,159 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--ink-1);
-  background: linear-gradient(180deg, #fafafa, #f1f3f5 35%, #eceff1 100%);
-  letter-spacing: 0.01em;
+  background: var(--bg-3);
+  letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ----- Components (ported from legacy) ----- */
+/* ----- Buttons (clean, pill-shaped like YT) ----- */
 .btn {
-  height: 48px;
-  padding: 0 18px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  cursor: pointer;
-  background: linear-gradient(180deg, #ffffff, #f1f4f8);
-  font-weight: 600;
-  color: var(--ink-1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6),
-    0 2px 6px rgba(12, 18, 28, 0.06);
-  transition: transform 0.06s ease, box-shadow 0.2s ease, background 0.2s ease;
-}
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(12, 18, 28, 0.08);
-}
-.btn:active {
-  transform: translateY(0);
-}
-.btn.primary {
-  color: white;
-  border-color: transparent;
-  background: linear-gradient(180deg, var(--accent), #2d5efb);
-  box-shadow: 0 6px 16px rgba(58, 119, 255, 0.35);
-}
-.btn.primary:hover {
-  background: linear-gradient(180deg, #4a86ff, #2b57ea);
-  box-shadow: 0 10px 26px rgba(58, 119, 255, 0.4);
-}
-
-.card {
-  background: var(--glass);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
+  height: 36px;
+  padding: 0 14px;
   border-radius: 18px;
-  box-shadow: 0 12px 30px rgba(20, 23, 28, 0.06);
-}
-
-.eyebrow {
+  border: 1px solid var(--border-strong);
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, #ffffff, #f5f7f9);
-  color: var(--ink-2);
-  font-weight: 600;
-  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--bg);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--ink-1);
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.btn:hover {
+  background: var(--bg-2);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn.primary {
+  color: white;
+  border-color: var(--ink-1);
+  background: var(--ink-1);
+}
+.btn.primary:hover {
+  background: #333;
+}
+.btn.accent {
+  color: white;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.btn.accent:hover {
+  background: var(--accent-2);
 }
 
+/* ----- Card (flat, clean, no shadows by default) ----- */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* ----- Nav bar ----- */
 .nav-bar {
   position: sticky;
   top: 0;
   z-index: 40;
-  backdrop-filter: blur(10px);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.85),
-    rgba(255, 255, 255, 0.65)
-  );
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 
+/* ----- Form fields ----- */
 .input-field {
-  height: 48px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  padding: 0 14px;
-  font-size: 16px;
-  background: linear-gradient(180deg, #ffffff, #f4f6f8);
-  outline: none;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
   width: 100%;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+  background: var(--bg);
+  color: var(--ink-1);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .input-field:focus {
-  box-shadow: 0 0 0 5px var(--ring);
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* ----- Eyebrow / small badges (used on landing) ----- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink-2);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* ----- Section heading (YT Studio style — bold, no underline) ----- */
+.section-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+}
+
+/* ----- "Tabs" YT-Studio style ----- */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.tab-item {
+  position: relative;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  background: transparent;
+}
+.tab-item:hover {
+  color: var(--ink-1);
+}
+.tab-item[data-active="true"] {
+  color: var(--ink-1);
+  font-weight: 600;
+}
+.tab-item[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 2px;
+  background: var(--ink-1);
+}
+
+/* ----- KPI card (YT-Studio style: subtle border, large numbers) ----- */
+.kpi-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: default;
+  transition: border-color 0.12s ease;
+  text-align: left;
+}
+.kpi-card[data-clickable="true"] {
+  cursor: pointer;
+}
+.kpi-card[data-clickable="true"]:hover {
+  border-color: var(--border-strong);
+}
+.kpi-card[data-active="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
