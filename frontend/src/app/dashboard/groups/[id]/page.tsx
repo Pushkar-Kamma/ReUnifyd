@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { VideoThumbnail } from "@/components/video-thumbnail";
 import {
   Bar,
   BarChart,
@@ -208,12 +209,10 @@ export default function GroupDetailPage({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {it.thumbnail_url ? (
-                          <Image
+                          <VideoThumbnail
                             src={it.thumbnail_url}
-                            alt=""
                             width={64}
                             height={36}
-                            unoptimized
                             className="h-9 w-16 rounded object-cover"
                           />
                         ) : (
@@ -398,12 +397,10 @@ function AddVideoModal({
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       {v.thumbnail_url ? (
-                        <Image
+                        <VideoThumbnail
                           src={v.thumbnail_url}
-                          alt=""
                           width={64}
                           height={36}
-                          unoptimized
                           className="h-9 w-16 shrink-0 rounded object-cover"
                         />
                       ) : (

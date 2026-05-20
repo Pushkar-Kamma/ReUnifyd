@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { VideoThumbnail } from "@/components/video-thumbnail";
 import {
   CartesianGrid,
   Line,
@@ -453,12 +454,10 @@ function TopVideosCard({ videos }: { videos: OverviewTopVideo[] }) {
                 className="flex items-center gap-3 hover:bg-[var(--bg-2)] -mx-2 rounded-lg px-2 py-1.5"
               >
                 {v.thumbnail_url ? (
-                  <Image
+                  <VideoThumbnail
                     src={v.thumbnail_url}
-                    alt=""
                     width={72}
                     height={40}
-                    unoptimized
                     className="h-10 w-[72px] shrink-0 rounded object-cover"
                   />
                 ) : (

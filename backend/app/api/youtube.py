@@ -828,14 +828,14 @@ async def sync_full(
             emw = float(_get(row, "estimatedMinutesWatched", 0) or 0.0)
             avgd = float(_get(row, "averageViewDuration", 0) or 0.0)
             avgp = float(_get(row, "averageViewPercentage", 0) or 0.0)
-            impr = int(_get(row, "impressions", 0) or 0)
+            impr = max(0, int(_get(row, "impressions", 0) or 0))
             ctr0_1 = float(_get(row, "impressionsClickThroughRate", 0) or 0.0)
-            likes = int(_get(row, "likes", 0) or 0)
-            comments = int(_get(row, "comments", 0) or 0)
-            shares = int(_get(row, "shares", 0) or 0)
-            sg_vid = int(_get(row, "subscribersGained", 0) or 0)
-            views = int(_get(row, "views", 0) or 0)
-            rev = float(_get(row, "estimatedRevenue", 0) or 0.0)
+            likes = max(0, int(_get(row, "likes", 0) or 0))
+            comments = max(0, int(_get(row, "comments", 0) or 0))
+            shares = max(0, int(_get(row, "shares", 0) or 0))
+            sg_vid = max(0, int(_get(row, "subscribersGained", 0) or 0))
+            views = max(0, int(_get(row, "views", 0) or 0))
+            rev = max(0.0, float(_get(row, "estimatedRevenue", 0) or 0.0))
 
             session.execute(
                 sa.text(
@@ -885,9 +885,9 @@ async def sync_full(
                 if not vid_ext:
                     continue
                 st = item.get("statistics", {}) or {}
-                views = int(st.get("viewCount", 0) or 0)
-                likes = int(st.get("likeCount", 0) or 0)
-                comments = int(st.get("commentCount", 0) or 0) if st.get("commentCount") is not None else None
+                views = max(0, int(st.get("viewCount", 0) or 0))
+                likes = max(0, int(st.get("likeCount", 0) or 0))
+                comments = max(0, int(st.get("commentCount", 0) or 0)) if st.get("commentCount") is not None else None
 
                 v = video_map.get(vid_ext)
                 if not v:
@@ -1770,14 +1770,14 @@ async def sync_video(
             VideoDailyMetrics(
                 video_id=v.id,
                 date=day,
-                views=int(_get(row, "views", 0) or 0),
-                watch_time_minutes=int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0))),
-                avg_view_duration_seconds=int(round(float(_get(row, "averageViewDuration", 0) or 0.0))),
-                avg_percent_viewed=float(_get(row, "averageViewPercentage", 0) or 0.0),
-                likes=int(_get(row, "likes", 0) or 0),
-                comments=int(_get(row, "comments", 0) or 0),
-                shares=int(_get(row, "shares", 0) or 0),
-                subs_gained_from_video=int(_get(row, "subscribersGained", 0) or 0),
+                views=max(0, int(_get(row, "views", 0) or 0)),
+                watch_time_minutes=max(0, int(round(float(_get(row, "estimatedMinutesWatched", 0) or 0.0)))),
+                avg_view_duration_seconds=max(0, int(round(float(_get(row, "averageViewDuration", 0) or 0.0)))),
+                avg_percent_viewed=max(0.0, float(_get(row, "averageViewPercentage", 0) or 0.0)),
+                likes=max(0, int(_get(row, "likes", 0) or 0)),
+                comments=max(0, int(_get(row, "comments", 0) or 0)),
+                shares=max(0, int(_get(row, "shares", 0) or 0)),
+                subs_gained_from_video=max(0, int(_get(row, "subscribersGained", 0) or 0)),
             )
         )
         inserted += 1

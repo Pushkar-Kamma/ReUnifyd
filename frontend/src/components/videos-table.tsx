@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { VideoThumbnail } from "@/components/video-thumbnail";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { youtube, type VideoSummary } from "@/lib/youtube";
@@ -165,18 +165,12 @@ export function VideosTable({
                       href={detailHref}
                       className="flex items-center gap-3 hover:underline"
                     >
-                      {v.thumbnail_url ? (
-                        <Image
+                      <VideoThumbnail
                           src={v.thumbnail_url}
-                          alt=""
                           width={64}
                           height={36}
-                          unoptimized
                           className="h-9 w-16 shrink-0 rounded object-cover"
                         />
-                      ) : (
-                        <div className="h-9 w-16 shrink-0 rounded bg-[var(--bg-2)]" />
-                      )}
                       <span className="line-clamp-2 max-w-md">
                         {v.title || v.external_video_id}
                       </span>

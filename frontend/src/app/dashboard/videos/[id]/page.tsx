@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { VideoThumbnail } from "@/components/video-thumbnail";
 import {
   Area,
   AreaChart,
@@ -176,12 +177,10 @@ export default function VideoDetailPage({
 
       <header className="mt-4 mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
         {video.thumbnail_url ? (
-          <Image
+          <VideoThumbnail
             src={video.thumbnail_url}
-            alt=""
             width={240}
             height={135}
-            unoptimized
             className="aspect-video w-60 shrink-0 rounded-lg object-cover"
           />
         ) : (
