@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { youtube, type VideoSummary } from "@/lib/youtube";
 import { groups } from "@/lib/groups";
 import { formatCount, relativeTime } from "@/lib/format";
+import { useToast } from "@/components/toast";
 
 type SortKey =
   | "published_at"
@@ -62,6 +63,7 @@ export function VideosTable({
   const [addingToGroup, setAddingToGroup] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | "short" | "long">("all");
+  const { toast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -138,11 +140,19 @@ export function VideosTable({
     if (videoIds.length === 0) return;
     setAddingToGroup(true);
     try {
-      await groups.addItemsBatch(groupId, videoIds);
+      const r = await groups.addItemsBatch(groupId, videoIds);
       setSelected(new Set());
       setShowGroupModal(false);
+      const addedCount = r.added.length;
+      const skippedCount = r.skipped.length;
+      const msg = skippedCount > 0
+        ? `Added ${addedCount} — ${skippedCount} already in group`
+        : `Added ${addedCount} video${addedCount === 1 ? "" : "s"} to group`;
+      toast(msg, "success");
     } catch (e) {
-      setGroupsError(e instanceof Error ? e.message : "Failed to add videos to group");
+      const msg = e instanceof Error ? e.message : "Failed to add videos to group";
+      setGroupsError(msg);
+      toast(msg, "error");
     } finally {
       setAddingToGroup(false);
     }

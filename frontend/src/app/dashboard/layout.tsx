@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { apiUrl } from "@/lib/api";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { PeriodSwitcher } from "@/components/period-switcher";
+import { ToastProvider } from "@/components/toast";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -75,7 +76,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </header>
       <div className="flex flex-1">
         <DashboardSidebar />
-        <main className="min-w-0 flex-1 bg-[var(--bg-3)]">{children}</main>
+        <main className="min-w-0 flex-1 bg-[var(--bg-3)]"><ToastProvider>{children}</ToastProvider></main>
       </div>
     </>
   );

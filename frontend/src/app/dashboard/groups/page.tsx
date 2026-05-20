@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { groups, type ContentGroupSummary } from "@/lib/groups";
 import { ApiError } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
+import { useToast } from "@/components/toast";
 
 type SortKey = "name" | "item_count" | "total_views" | "updated_at";
 
@@ -13,6 +14,7 @@ export default function GroupsPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated_at");
+  const { toast } = useToast();
 
   const load = useCallback(async () => {
     setError(null);
@@ -39,8 +41,9 @@ export default function GroupsPage() {
     try {
       await groups.remove(id);
       await load();
+      toast("Group deleted", "success");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed");
+      toast(err instanceof Error ? err.message : "Delete failed", "error");
     }
   }
 
