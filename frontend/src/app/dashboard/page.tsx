@@ -272,6 +272,27 @@ function OverviewInner() {
         />
       </div>
 
+      {/* Quick stats cards */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard
+          label="Lifetime views"
+          value={formatCount(data.lifetime_views)}
+          subtext="All-time across all videos"
+        />
+        <StatCard
+          label="Videos"
+          value={data.video_count}
+          subtext={`${formatCount(data.avg_views_per_video)} avg views`}
+        />
+        {data.top_channel ? (
+          <StatCard
+            label="Top channel"
+            value={data.top_channel.title || "Untitled"}
+            subtext={`${formatCount(data.top_channel.views)} views (${data.days}d)`}
+          />
+        ) : null}
+      </div>
+
       {/* Multi-line chart: one line per channel */}
       <div className="card mb-6 p-5">
         <div className="mb-3 flex items-center justify-between">
@@ -372,6 +393,24 @@ function KpiCard({
         <span className="ml-1 text-xs text-[var(--ink-2)]">vs prev period</span>
       </div>
     </button>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  subtext,
+}: {
+  label: string;
+  value: string | number;
+  subtext: string;
+}) {
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-1)] px-4 py-3">
+      <div className="text-xs text-[var(--ink-2)]">{label}</div>
+      <div className="mt-1 text-xl font-semibold tracking-tight">{value}</div>
+      <div className="mt-1 text-xs text-[var(--ink-3)]">{subtext}</div>
+    </div>
   );
 }
 

@@ -200,6 +200,10 @@ export type OverviewResponse = {
   days: number;
   totals: OverviewTotals;
   prev_totals: OverviewTotals;
+  lifetime_views: number;
+  video_count: number;
+  avg_views_per_video: number;
+  top_channel: OverviewChannel | null;
   channels: OverviewChannel[];
   series_by_channel: OverviewSeries[];
   top_videos: OverviewTopVideo[];

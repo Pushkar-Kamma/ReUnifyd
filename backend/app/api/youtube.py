@@ -1166,6 +1166,10 @@ async def overview(
             "days": days,
             "totals": _empty_totals(),
             "prev_totals": _empty_totals(),
+            "lifetime_views": 0,
+            "video_count": 0,
+            "avg_views_per_video": 0,
+            "top_channel": None,
             "channels": [],
             "series_by_channel": [],
             "top_videos": [],
@@ -1321,11 +1325,38 @@ async def overview(
     ).bindparams(**bindings, start=start, end=end)
     top_videos = [dict(r._mapping) for r in session.exec(top_stmt).all()]
 
+    # Lifetime stats (all-time across all videos)
+    lifetime_stmt = sa.text(
+        f"""
+        SELECT
+          COALESCE(SUM(m.views), 0) AS lifetime_views,
+          COUNT(DISTINCT v.id) AS video_count
+        FROM video v
+        JOIN channel c ON c.id = v.channel_id
+        LEFT JOIN video_daily_metrics m ON m.video_id = v.id
+        WHERE v.channel_id IN ({placeholders}) AND v.is_active = TRUE
+        """
+    ).bindparams(**bindings)
+    lifetime_row = session.exec(lifetime_stmt).first()
+    lifetime_m = dict(lifetime_row._mapping) if lifetime_row else {}
+    lifetime_views = int(lifetime_m.get("lifetime_views") or 0)
+    video_count = int(lifetime_m.get("video_count") or 0)
+    avg_views_per_video = lifetime_views // video_count if video_count > 0 else 0
+
+    # Top channel by views in the current period
+    top_channel = None
+    if channels_out:
+        top_channel = max(channels_out, key=lambda c: c["views"])
+
     return {
         "ok": True,
         "days": days,
         "totals": totals,
         "prev_totals": prev_totals,
+        "lifetime_views": lifetime_views,
+        "video_count": video_count,
+        "avg_views_per_video": avg_views_per_video,
+        "top_channel": top_channel,
         "channels": channels_out,
         "series_by_channel": series_by_channel,
         "top_videos": top_videos,
