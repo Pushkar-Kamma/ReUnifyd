@@ -1282,6 +1282,233 @@ def _empty_totals() -> dict:
 
 
 # ----------------------------
+# Explore (YT-Studio Advanced Mode style pivot)
+# ----------------------------
+_EXPLORE_METRICS = {
+    # name: (sql expression on channel_daily_metrics, formatter hint)
+    "views": "SUM(views)",
+    "watch_time_minutes": "SUM(watch_time_minutes)",
+    "subscribers_gained": "SUM(COALESCE(subscribers_gained, 0))",
+    "subscribers_lost": "SUM(COALESCE(subscribers_lost, 0))",
+    "subscribers_net": "SUM(COALESCE(subscribers_gained, 0) - COALESCE(subscribers_lost, 0))",
+    "estimated_revenue": "SUM(COALESCE(estimated_revenue, 0))",
+}
+_EXPLORE_VIDEO_METRICS = {
+    "views": "SUM(views)",
+    "watch_time_minutes": "SUM(watch_time_minutes)",
+    "likes": "SUM(COALESCE(likes, 0))",
+    "comments": "SUM(COALESCE(comments, 0))",
+    "shares": "SUM(COALESCE(shares, 0))",
+    "estimated_revenue": "SUM(COALESCE(estimated_revenue, 0))",
+}
+_EXPLORE_DIMENSIONS = {"time", "channel", "video", "content_type"}
+_EXPLORE_GROUP_BY = {"none", "channel", "content_type"}
+
+
+@router.get("/explore")
+def explore(
+    metric: str = "views",
+    dimension: str = "time",
+    group_by: str = "none",
+    days: int = 28,
+    channel_id: int | None = None,
+    content_type: str | None = None,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Pivot endpoint: pick one metric, one dimension (X-axis or rows),
+    optionally one group-by (= series / columns), with simple filters.
+
+    Source tables:
+      - dimension=time | channel  → channel_daily_metrics (channel-level)
+      - dimension=video | content_type → video_daily_metrics (video-level)
+    """
+    if metric not in _EXPLORE_METRICS and metric not in _EXPLORE_VIDEO_METRICS:
+        raise HTTPException(status_code=400, detail=f"unknown metric: {metric}")
+    if dimension not in _EXPLORE_DIMENSIONS:
+        raise HTTPException(status_code=400, detail=f"unknown dimension: {dimension}")
+    if group_by not in _EXPLORE_GROUP_BY:
+        raise HTTPException(status_code=400, detail=f"unknown group_by: {group_by}")
+
+    days = max(1, min(days, 365))
+    end = dt.date.today()
+    start = end - dt.timedelta(days=days - 1)
+
+    # User-owned channels
+    chans = session.exec(
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_id, Channel.is_active == True)  # noqa: E712
+    ).all()
+    if not chans:
+        return {"ok": True, "rows": [], "series_keys": [], "x_label": dimension, "y_label": metric}
+
+    if channel_id is not None:
+        chans = [c for c in chans if c.id == channel_id]
+        if not chans:
+            raise HTTPException(status_code=404, detail="channel not found")
+    chan_ids = [c.id for c in chans]
+    placeholders = ",".join(f":id{i}" for i in range(len(chan_ids)))
+    bindings = {f"id{i}": cid for i, cid in enumerate(chan_ids)}
+
+    use_video_table = dimension in {"video", "content_type"}
+    metric_map = _EXPLORE_VIDEO_METRICS if use_video_table else _EXPLORE_METRICS
+    if metric not in metric_map:
+        raise HTTPException(
+            status_code=400,
+            detail=f"metric '{metric}' not available for dimension '{dimension}'",
+        )
+    metric_expr = metric_map[metric]
+
+    # Channel name map for friendly labels
+    chan_titles = {c.id: (c.title or f"Channel {c.id}") for c in chans}
+
+    def _content_type_filter_sql(prefix: str) -> str:
+        if content_type in ("short", "video"):
+            return f"AND {prefix}.content_type = :ct "
+        return ""
+
+    if use_video_table:
+        if group_by == "channel":
+            stmt_text = f"""
+                SELECT {dimension_col(dimension)} AS x,
+                       v.channel_id AS g,
+                       {metric_expr} AS y
+                FROM video v
+                LEFT JOIN video_daily_metrics m
+                       ON m.video_id = v.id AND m.date BETWEEN :start AND :end
+                WHERE v.channel_id IN ({placeholders}) AND v.is_active = TRUE
+                  {_content_type_filter_sql("v")}
+                GROUP BY x, g
+                ORDER BY y DESC
+                LIMIT 200
+            """
+        elif group_by == "content_type":
+            stmt_text = f"""
+                SELECT {dimension_col(dimension)} AS x,
+                       COALESCE(v.content_type, 'unknown') AS g,
+                       {metric_expr} AS y
+                FROM video v
+                LEFT JOIN video_daily_metrics m
+                       ON m.video_id = v.id AND m.date BETWEEN :start AND :end
+                WHERE v.channel_id IN ({placeholders}) AND v.is_active = TRUE
+                  {_content_type_filter_sql("v")}
+                GROUP BY x, g
+                ORDER BY y DESC
+                LIMIT 200
+            """
+        else:
+            stmt_text = f"""
+                SELECT {dimension_col(dimension)} AS x,
+                       NULL AS g,
+                       {metric_expr} AS y
+                FROM video v
+                LEFT JOIN video_daily_metrics m
+                       ON m.video_id = v.id AND m.date BETWEEN :start AND :end
+                WHERE v.channel_id IN ({placeholders}) AND v.is_active = TRUE
+                  {_content_type_filter_sql("v")}
+                GROUP BY x
+                ORDER BY y DESC
+                LIMIT 200
+            """
+        params = {**bindings, "start": start, "end": end}
+        if content_type in ("short", "video"):
+            params["ct"] = content_type
+        stmt = sa.text(stmt_text).bindparams(**params)
+    else:
+        # channel_daily_metrics path
+        if dimension == "time":
+            x_expr = "m.date"
+        elif dimension == "channel":
+            x_expr = "m.channel_id"
+        else:
+            raise HTTPException(status_code=400, detail="unsupported dimension")
+
+        if group_by == "channel":
+            g_expr = "m.channel_id"
+        elif group_by == "content_type":
+            raise HTTPException(
+                status_code=400,
+                detail="group_by=content_type requires dimension in (video, content_type)",
+            )
+        else:
+            g_expr = "NULL"
+
+        stmt_text = f"""
+            SELECT {x_expr} AS x,
+                   {g_expr} AS g,
+                   {metric_expr} AS y
+            FROM channel_daily_metrics m
+            WHERE m.channel_id IN ({placeholders})
+              AND m.date BETWEEN :start AND :end
+            GROUP BY x, g
+            ORDER BY x ASC
+        """
+        stmt = sa.text(stmt_text).bindparams(**bindings, start=start, end=end)
+
+    raw = [dict(r._mapping) for r in session.exec(stmt).all()]
+
+    # Friendly labels
+    def label_x(x):
+        if dimension == "time":
+            return x.isoformat() if hasattr(x, "isoformat") else str(x)
+        if dimension == "channel":
+            try:
+                return chan_titles.get(int(x), str(x))
+            except (ValueError, TypeError):
+                return str(x)
+        if dimension == "content_type":
+            return "Shorts" if x == "short" else "Long-form" if x == "video" else str(x)
+        return str(x) if x is not None else "—"
+
+    def label_g(g):
+        if group_by == "channel":
+            try:
+                return chan_titles.get(int(g), str(g))
+            except (ValueError, TypeError):
+                return str(g)
+        if group_by == "content_type":
+            return "Shorts" if g == "short" else "Long-form" if g == "video" else str(g)
+        return None
+
+    rows = []
+    series_keys: list[str] = []
+    seen_keys: set[str] = set()
+    for r in raw:
+        x = label_x(r["x"])
+        g = label_g(r["g"])
+        rows.append({"x": x, "g": g, "y": float(r["y"] or 0)})
+        if g and g not in seen_keys:
+            seen_keys.add(g)
+            series_keys.append(g)
+
+    return {
+        "ok": True,
+        "metric": metric,
+        "dimension": dimension,
+        "group_by": group_by,
+        "days": days,
+        "x_label": dimension,
+        "y_label": metric,
+        "series_keys": series_keys,
+        "rows": rows,
+    }
+
+
+def dimension_col(dimension: str) -> str:
+    """SQL column for the X-axis dimension. Only called from /explore."""
+    if dimension == "time":
+        return "m.date"
+    if dimension == "channel":
+        return "v.channel_id"
+    if dimension == "video":
+        return "v.id"
+    if dimension == "content_type":
+        return "COALESCE(v.content_type, 'unknown')"
+    raise ValueError(f"bad dimension {dimension}")
+
+
+# ----------------------------
 # Time series for charts (channel)
 # ----------------------------
 @router.get("/channel/timeseries")

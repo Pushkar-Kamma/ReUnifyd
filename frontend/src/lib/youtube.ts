@@ -95,6 +95,53 @@ export const youtube = {
 
   overview: (days: number = 28) =>
     api<OverviewResponse>(`/youtube/overview?days=${days}`),
+
+  explore: (params: ExploreParams) => {
+    const qs = new URLSearchParams();
+    qs.set("metric", params.metric);
+    qs.set("dimension", params.dimension);
+    qs.set("group_by", params.groupBy ?? "none");
+    qs.set("days", String(params.days ?? 28));
+    if (params.channelId != null) qs.set("channel_id", String(params.channelId));
+    if (params.contentType) qs.set("content_type", params.contentType);
+    return api<ExploreResponse>(`/youtube/explore?${qs.toString()}`);
+  },
+};
+
+export type ExploreMetric =
+  | "views"
+  | "watch_time_minutes"
+  | "subscribers_gained"
+  | "subscribers_lost"
+  | "subscribers_net"
+  | "estimated_revenue"
+  | "likes"
+  | "comments"
+  | "shares";
+
+export type ExploreDimension = "time" | "channel" | "video" | "content_type";
+export type ExploreGroupBy = "none" | "channel" | "content_type";
+export type ExploreContentType = "short" | "video" | null;
+
+export type ExploreParams = {
+  metric: ExploreMetric;
+  dimension: ExploreDimension;
+  groupBy?: ExploreGroupBy;
+  days?: number;
+  channelId?: number | null;
+  contentType?: ExploreContentType;
+};
+
+export type ExploreResponse = {
+  ok: true;
+  metric: ExploreMetric;
+  dimension: ExploreDimension;
+  group_by: ExploreGroupBy;
+  days: number;
+  x_label: string;
+  y_label: string;
+  series_keys: string[];
+  rows: Array<{ x: string; g: string | null; y: number }>;
 };
 
 export type OverviewTotals = {
