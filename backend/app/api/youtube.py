@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import time
 
 import httpx
 import sqlalchemy as sa
@@ -1131,6 +1132,33 @@ def videos_summary(
 # ----------------------------
 # Aggregated Overview (one round-trip for the dashboard)
 # ----------------------------
+
+# Simple in-memory TTL cache for overview responses (per user+params).
+# Keeps last N entries; entries expire after TTL seconds.
+_OVERVIEW_CACHE: dict[tuple, tuple[float, dict]] = {}
+_OVERVIEW_CACHE_TTL_S = 60
+_OVERVIEW_CACHE_MAX = 256
+
+
+def _overview_cache_get(key: tuple) -> dict | None:
+    entry = _OVERVIEW_CACHE.get(key)
+    if not entry:
+        return None
+    ts, value = entry
+    if time.time() - ts > _OVERVIEW_CACHE_TTL_S:
+        _OVERVIEW_CACHE.pop(key, None)
+        return None
+    return value
+
+
+def _overview_cache_set(key: tuple, value: dict) -> None:
+    if len(_OVERVIEW_CACHE) >= _OVERVIEW_CACHE_MAX:
+        # Evict oldest
+        oldest_key = min(_OVERVIEW_CACHE, key=lambda k: _OVERVIEW_CACHE[k][0])
+        _OVERVIEW_CACHE.pop(oldest_key, None)
+    _OVERVIEW_CACHE[key] = (time.time(), value)
+
+
 @router.get("/overview")
 async def overview(
     days: int = 28,
@@ -1143,8 +1171,13 @@ async def overview(
     Pass channel_id to restrict to a single channel (must be owned by user).
     Returns: totals, prior-period totals (for deltas), per-channel time series
     (one line per channel in the chart), channel leaderboard, top videos mixed.
+    Cached in-memory for 60s per (user, days, channel_id).
     """
     days = max(1, min(days, 365))
+    cache_key = (user_id, days, channel_id)
+    cached = _overview_cache_get(cache_key)
+    if cached is not None:
+        return cached
     end = dt.datetime.now(dt.UTC).date()
     start = end - dt.timedelta(days=days - 1)
     prev_end = start - dt.timedelta(days=1)
@@ -1160,7 +1193,7 @@ async def overview(
         chans_query = chans_query.where(Channel.id == channel_id)
     chans = session.exec(chans_query).all()
     if not chans:
-        return {
+        empty_result = {
             "ok": True,
             "days": days,
             "totals": _empty_totals(),
@@ -1173,6 +1206,8 @@ async def overview(
             "series_by_channel": [],
             "top_videos": [],
         }
+        _overview_cache_set(cache_key, empty_result)
+        return empty_result
     chan_ids = [c.id for c in chans]
     placeholders = ",".join(f":id{i}" for i in range(len(chan_ids)))
     bindings = {f"id{i}": cid for i, cid in enumerate(chan_ids)}
@@ -1347,7 +1382,7 @@ async def overview(
     if channels_out:
         top_channel = max(channels_out, key=lambda c: c["views"])
 
-    return {
+    result = {
         "ok": True,
         "days": days,
         "totals": totals,
@@ -1360,6 +1395,8 @@ async def overview(
         "series_by_channel": series_by_channel,
         "top_videos": top_videos,
     }
+    _overview_cache_set(cache_key, result)
+    return result
 
 
 def _empty_totals() -> dict:
