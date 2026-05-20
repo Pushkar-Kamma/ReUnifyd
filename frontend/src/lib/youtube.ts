@@ -61,11 +61,18 @@ export const youtube = {
       `/youtube/channel/timeseries?channel_id=${channelId}&days=${days}`,
     ),
 
-  videosSummary: (channelId: number) =>
-    api<{
+  videosSummary: (channelId: number, opts?: { limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams({ channel_id: String(channelId) });
+    if (opts?.limit != null) qs.set("limit", String(opts.limit));
+    if (opts?.offset != null) qs.set("offset", String(opts.offset));
+    return api<{
       ok: true;
       videos: VideoSummary[];
-    }>(`/youtube/videos/summary?channel_id=${channelId}`),
+      total: number;
+      limit: number;
+      offset: number;
+    }>(`/youtube/videos/summary?${qs.toString()}`);
+  },
 
   insights: (channelId: number, days: number = 28) =>
     api<InsightsResponse>(

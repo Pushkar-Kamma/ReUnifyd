@@ -1094,12 +1094,23 @@ async def sync_manual(
 @router.get("/videos/summary")
 def videos_summary(
     channel_id: int,
+    limit: int = 500,
+    offset: int = 0,
     user_id: int = Depends(require_user_id),
     session: Session = Depends(get_session),
 ):
     c = _user_channel(session, user_id, channel_id)
     if not c:
         raise HTTPException(status_code=404, detail="channel not found")
+
+    limit = max(1, min(limit, 1000))
+    offset = max(0, offset)
+
+    total_row = session.exec(
+        sa.text("SELECT COUNT(*) AS n FROM video WHERE channel_id = :cid AND is_active = TRUE")
+        .bindparams(sa.bindparam("cid", value=c.id))
+    ).first()
+    total = int(total_row[0]) if total_row else 0
 
     stmt = sa.text(
         """
@@ -1122,11 +1133,16 @@ def videos_summary(
         GROUP BY v.id, v.external_video_id, v.title, v.thumbnail_url,
                  v.published_at, v.duration_seconds, v.content_type
         ORDER BY views DESC
+        LIMIT :lim OFFSET :off
         """
-    ).bindparams(sa.bindparam("cid", value=c.id))
+    ).bindparams(
+        sa.bindparam("cid", value=c.id),
+        sa.bindparam("lim", value=limit),
+        sa.bindparam("off", value=offset),
+    )
     q = session.exec(stmt).all()
     rows = [dict(r._mapping) for r in q]
-    return {"ok": True, "videos": rows}
+    return {"ok": True, "videos": rows, "total": total, "limit": limit, "offset": offset}
 
 
 # ----------------------------
