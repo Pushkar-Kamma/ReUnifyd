@@ -16,6 +16,7 @@ import { youtube, type Channel, type DailyMetric } from "@/lib/youtube";
 import { ApiError } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
 import { VideosTable } from "@/components/videos-table";
+import { VideoTimeline } from "@/components/video-timeline";
 import { AudienceInsights } from "@/components/audience-insights";
 import { ContentTypeBreakdown } from "@/components/content-type-breakdown";
 
@@ -68,6 +69,7 @@ export default function ChannelDetailPage({
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [metric, setMetric] = useState<MetricKey>("views");
+  const [viewMode, setViewMode] = useState<"table" | "timeline">("table");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -294,12 +296,79 @@ export default function ChannelDetailPage({
       </h2>
       <ContentTypeBreakdown channelId={id} refreshKey={channel.last_synced_at ?? ""} />
 
-      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+      <h2 className="mt-10 mb-3 flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Videos
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode("table")}
+            className={`text-xs px-2 py-1 rounded transition ${
+              viewMode === "table"
+                ? "bg-[var(--accent)] text-white"
+                : "bg-[var(--bg-2)] hover:bg-[var(--bg-1)]"
+            }`}
+          >
+            📋 Table
+          </button>
+          <button
+            onClick={() => setViewMode("timeline")}
+            className={`text-xs px-2 py-1 rounded transition ${
+              viewMode === "timeline"
+                ? "bg-[var(--accent)] text-white"
+                : "bg-[var(--bg-2)] hover:bg-[var(--bg-1)]"
+            }`}
+          >
+            ⏱️ Timeline
+          </button>
+        </div>
       </h2>
-      <VideosTable channelId={id} refreshKey={channel.last_synced_at ?? ""} />
+      {viewMode === "table" ? (
+        <VideosTable channelId={id} refreshKey={channel.last_synced_at ?? ""} />
+      ) : (
+        <VideoTimelineWrapper channelId={id} refreshKey={channel.last_synced_at ?? ""} />
+      )}
     </section>
   );
+}
+
+function VideoTimelineWrapper({
+  channelId,
+  refreshKey,
+}: {
+  channelId: number;
+  refreshKey?: string | number | null;
+}) {
+  const [videos, setVideos] = useState<any[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setVideos(null);
+    setError(null);
+    youtube
+      .videosSummary(channelId)
+      .then((r) => {
+        if (!cancelled) setVideos(r.videos);
+      })
+      .catch((e) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load videos");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, refreshKey]);
+
+  if (error) {
+    return (
+      <div className="card p-5 text-sm text-red-600" role="alert">
+        {error}
+      </div>
+    );
+  }
+  if (videos === null) {
+    return <div className="card p-5 text-sm text-[var(--ink-2)]">Loading…</div>;
+  }
+  return <VideoTimeline videos={videos} />;
 }
 
 function KpiCard({
