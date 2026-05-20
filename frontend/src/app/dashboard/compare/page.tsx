@@ -123,38 +123,93 @@ function CompareInner() {
       </header>
 
       {/* Channel chip picker */}
-      <div className="mb-5 flex flex-wrap gap-2">
-        {overview?.channels.map((c) => {
-          const on = selectedIds.has(c.id);
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => toggle(c.id)}
-              className={[
-                "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition",
-                on
-                  ? "border-[var(--accent)] bg-[var(--accent)]/8 font-medium text-[var(--accent)]"
-                  : "border-[var(--border-strong)] hover:bg-[var(--bg-2)]",
-              ].join(" ")}
-            >
-              {c.avatar_url ? (
-                <Image
-                  src={c.avatar_url}
-                  alt=""
-                  width={18}
-                  height={18}
-                  unoptimized
-                  className="h-[18px] w-[18px] rounded-full object-cover"
-                />
-              ) : (
-                <span className="h-[18px] w-[18px] rounded-full bg-[var(--bg-2)]" />
-              )}
-              {c.title}
-              {on ? <span className="text-xs">✕</span> : <span className="text-xs">+</span>}
-            </button>
-          );
-        })}
+      <div className="mb-5 space-y-3">
+        {/* Preset buttons */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              if (!overview) return;
+              const top3 = [...overview.channels]
+                .sort((a, b) => b.views - a.views)
+                .slice(0, 3)
+                .map((c) => c.id);
+              setSelectedIds(new Set(top3));
+            }}
+            className="btn-sm text-xs"
+          >
+            📊 Top 3
+          </button>
+          <button
+            onClick={() => {
+              if (!overview) return;
+              const top5 = [...overview.channels]
+                .sort((a, b) => b.views - a.views)
+                .slice(0, 5)
+                .map((c) => c.id);
+              setSelectedIds(new Set(top5));
+            }}
+            className="btn-sm text-xs"
+          >
+            ⭐ Top 5
+          </button>
+          <button
+            onClick={() => {
+              if (!overview) return;
+              setSelectedIds(
+                new Set(
+                  overview.channels
+                    .sort((a, b) => b.views - a.views)
+                    .slice(0, 5)
+                    .map((c) => c.id),
+                ),
+              );
+            }}
+            className="btn-sm text-xs"
+          >
+            🔄 All
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="btn-sm text-xs"
+          >
+            ✕ Clear
+          </button>
+        </div>
+
+        {/* Channels chips */}
+        <div className="flex flex-wrap gap-2">
+          {overview?.channels.map((c) => {
+            const on = selectedIds.has(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => toggle(c.id)}
+                className={[
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition",
+                  on
+                    ? "border-[var(--accent)] bg-[var(--accent)]/8 font-medium text-[var(--accent)]"
+                    : "border-[var(--border-strong)] hover:bg-[var(--bg-2)]",
+                ].join(" ")}
+              >
+                {c.avatar_url ? (
+                  <Image
+                    src={c.avatar_url}
+                    alt=""
+                    width={18}
+                    height={18}
+                    unoptimized
+                    className="h-[18px] w-[18px] rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="h-[18px] w-[18px] rounded-full bg-[var(--bg-2)]" />
+                )}
+                {c.title}
+                {on ? <span className="text-xs">✕</span> : <span className="text-xs">+</span>}
+              </button>
+            );
+          })}
+        </div>
         {overview && overview.channels.length === 0 ? (
           <p className="text-sm text-[var(--ink-2)]">
             You haven&apos;t connected any channels yet.{" "}
