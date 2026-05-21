@@ -11,6 +11,7 @@ import { ToastProvider } from "@/components/toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { CommandPalette } from "@/components/command-palette";
+import { NotificationBell } from "@/components/notification-bell";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -82,6 +83,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <span className="hidden text-[var(--ink-2)] md:inline">
               {user.email}
             </span>
+            <NotificationBell />
             <ThemeToggle />
             <button onClick={() => logout()} className="btn">
               Log out
