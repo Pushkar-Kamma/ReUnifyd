@@ -22,6 +22,7 @@ import { ContentTypeBreakdown } from "@/components/content-type-breakdown";
 import { ChannelHealthScore } from "@/components/channel-health-score";
 import { PostTimeHeatmap } from "@/components/post-time-heatmap";
 import { ChannelGoals } from "@/components/channel-goals";
+import { TitlePatternInsights } from "@/components/title-pattern-insights";
 
 const DAYS = 28;
 
@@ -343,6 +344,11 @@ export default function ChannelDetailPage({
         Upload schedule
       </h2>
       <PostTimeHeatmap channelId={id} />
+
+      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+        Title patterns
+      </h2>
+      <TitlePatternInsights channelId={id} />
 
       <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Goals
