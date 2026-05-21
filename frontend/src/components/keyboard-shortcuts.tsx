@@ -111,6 +111,7 @@ export function KeyboardShortcuts() {
       >
         <h2 className="mb-4 text-lg font-semibold">Keyboard shortcuts</h2>
         <ul className="space-y-2 text-sm">
+          <Row keys={["⌘/Ctrl", "K"]} label="Command palette" />
           <Row keys={["g", "d"]} label="Go to dashboard" />
           <Row keys={["g", "c"]} label="Go to channels" />
           <Row keys={["g", "g"]} label="Go to groups" />

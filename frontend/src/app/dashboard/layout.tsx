@@ -10,6 +10,7 @@ import { PeriodSwitcher } from "@/components/period-switcher";
 import { ToastProvider } from "@/components/toast";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { CommandPalette } from "@/components/command-palette";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -90,7 +91,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </header>
       <div className="flex flex-1">
         <DashboardSidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-        <main className="min-w-0 flex-1 bg-[var(--bg-3)]"><ToastProvider><KeyboardShortcuts />{children}</ToastProvider></main>
+        <main className="min-w-0 flex-1 bg-[var(--bg-3)]"><ToastProvider><KeyboardShortcuts /><CommandPalette />{children}</ToastProvider></main>
       </div>
     </>
   );
