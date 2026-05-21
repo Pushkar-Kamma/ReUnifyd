@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { youtube, type Channel } from "@/lib/youtube";
 import { ApiError, apiUrl } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
+import { ChannelSparkline } from "@/components/channel-sparkline";
 
 function ChannelsContent() {
   const params = useSearchParams();
@@ -146,6 +147,13 @@ function ChannelCard({ channel }: { channel: Channel }) {
             ? `synced ${relativeTime(channel.last_synced_at)}`
             : <span className="animate-pulse text-amber-600">⟳ syncing…</span>}
         </div>
+      </div>
+
+      <div className="mt-1 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2">
+        <span className="text-[10px] uppercase tracking-wide text-[var(--ink-3)]">
+          28d views
+        </span>
+        <ChannelSparkline channelId={channel.id} />
       </div>
     </Link>
   );
