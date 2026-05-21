@@ -3,6 +3,7 @@
 import { VideoThumbnail } from "@/components/video-thumbnail";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { youtube, type VideoSummary } from "@/lib/youtube";
 import { groups } from "@/lib/groups";
 import { formatCount, relativeTime } from "@/lib/format";
@@ -55,8 +56,24 @@ export function VideosTable({
 }) {
   const [rows, setRows] = useState<VideoSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("views");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const initial = useMemo(() => {
+    const sk = searchParams.get("vsort");
+    const sd = searchParams.get("vdir");
+    const tf = searchParams.get("vtype");
+    const q = searchParams.get("vq") ?? "";
+    return {
+      sortKey: (["published_at", "views", "likes", "comments"] as const).includes(sk as SortKey) ? (sk as SortKey) : "views",
+      sortDir: (sd === "asc" ? "asc" : "desc") as SortDir,
+      typeFilter: (["all", "short", "long"] as const).includes(tf as "all" | "short" | "long") ? (tf as "all" | "short" | "long") : "all",
+      search: q,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [sortKey, setSortKey] = useState<SortKey>(initial.sortKey);
+  const [sortDir, setSortDir] = useState<SortDir>(initial.sortDir);
   const [showAll, setShowAll] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -64,9 +81,25 @@ export function VideosTable({
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
   const [addingToGroup, setAddingToGroup] = useState(false);
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "short" | "long">("all");
+  const [search, setSearch] = useState(initial.search);
+  const [typeFilter, setTypeFilter] = useState<"all" | "short" | "long">(initial.typeFilter);
   const { toast } = useToast();
+
+  // Sync filter/sort/search state to URL (replace, not push, to avoid history spam).
+  useEffect(() => {
+    const sp = new URLSearchParams(Array.from(searchParams.entries()));
+    const setOrDel = (k: string, v: string, def: string) => {
+      if (v && v !== def) sp.set(k, v);
+      else sp.delete(k);
+    };
+    setOrDel("vsort", sortKey, "views");
+    setOrDel("vdir", sortDir, "desc");
+    setOrDel("vtype", typeFilter, "all");
+    setOrDel("vq", search, "");
+    const qs = sp.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortKey, sortDir, typeFilter, search]);
 
   useEffect(() => {
     let cancelled = false;
@@ -337,7 +370,7 @@ export function VideosTable({
       )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[var(--bg-2)] text-left text-xs uppercase tracking-wide text-[var(--ink-2)]">
+          <thead className="sticky top-0 z-10 bg-[var(--bg-2)] text-left text-xs uppercase tracking-wide text-[var(--ink-2)] shadow-[0_1px_0_var(--border)]">
             <tr>
               <th className="px-3 py-3 w-12">
                 <input
