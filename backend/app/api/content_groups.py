@@ -325,13 +325,13 @@ def add_items_batch(
     _own_group_or_404(session, user_id, group_id)
     if not body.video_ids:
         return {"ok": True, "added": [], "skipped": []}
-    
+
     # Verify user owns all videos
     owned_ids = set()
     for vid in body.video_ids:
         if _user_owns_video(session, user_id, vid):
             owned_ids.add(vid)
-    
+
     added = []
     skipped = []
     for video_id in body.video_ids:
@@ -355,7 +355,7 @@ def add_items_batch(
         )
         session.add(it)
         added.append(video_id)
-    
+
     session.commit()
     return {"ok": True, "added": added, "skipped": skipped}
 
