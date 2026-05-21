@@ -23,6 +23,7 @@ import {
   type OverviewResponse,
   type OverviewTopVideo,
 } from "@/lib/youtube";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 
 const SERIES_COLORS = [
   "#065fd4", // YT blue
@@ -192,6 +193,7 @@ function OverviewInner() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-6">
+      <OnboardingChecklist />
       <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
