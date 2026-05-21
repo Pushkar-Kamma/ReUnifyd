@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from app.api.deps import require_user_id
 from app.core.crypto import decrypt_str, encrypt_str  # Fernet helpers you kept
+from app.core.rate_limit import rate_limit
 from app.core.security import hash_password, verify_password
 from app.core.settings import settings
 
@@ -481,7 +482,11 @@ class LoginIn(BaseModel):
     email: EmailStr
     password: str
 
-@router.post("/signup")
+# 5 signups / 10 login attempts per IP per 5 minutes
+_signup_limiter = rate_limit("auth:signup", max_events=5, window_s=300)
+_login_limiter = rate_limit("auth:login", max_events=10, window_s=300)
+
+@router.post("/signup", dependencies=[Depends(_signup_limiter)])
 def signup(body: SignupIn, req: Request, session: Session = Depends(get_session)):
     email = body.email.lower().strip()
 
@@ -496,7 +501,7 @@ def signup(body: SignupIn, req: Request, session: Session = Depends(get_session)
     req.session["user_id"] = u.id
     return {"ok": True, "user_id": u.id, "email": u.email}
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(_login_limiter)])
 def login(body: LoginIn, req: Request, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.email == body.email.lower().strip())).first()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
