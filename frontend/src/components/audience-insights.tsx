@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useEffect, useState } from "react";
 import {
@@ -98,9 +99,46 @@ export function AudienceInsights({
   }, [channelId, refreshKey]);
 
   if (error) {
+    const is401 = /\b401\b/.test(error);
+    const is403 = /\b403\b/.test(error);
+    const title = is401
+      ? "Reconnect required"
+      : is403
+        ? "Access denied"
+        : "Audience data unavailable";
+    const body = is401
+      ? "Your YouTube connection has expired. Reconnect this channel to refresh audience insights."
+      : is403
+        ? "This Google account doesn't have analytics access for this channel."
+        : "We couldn't load audience insights right now. Please try again shortly.";
     return (
-      <div className="card p-5 text-sm text-red-600" role="alert">
-        {error}
+      <div
+        className="card flex items-start gap-3 p-5 text-sm"
+        role="alert"
+        aria-live="polite"
+      >
+        <div
+          aria-hidden="true"
+          className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-[var(--ink)]">{title}</div>
+          <div className="mt-0.5 text-[var(--ink-2)]">{body}</div>
+          {is401 ? (
+            <Link
+              href="/dashboard/channels"
+              className="mt-2 inline-flex items-center text-[var(--brand)] hover:underline"
+            >
+              Manage channels →
+            </Link>
+          ) : null}
+        </div>
       </div>
     );
   }

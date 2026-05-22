@@ -26,6 +26,9 @@ import { TitlePatternInsights } from "@/components/title-pattern-insights";
 
 const DAYS = 28;
 
+type SyncStatusKind = "success" | "info" | "error" | "auth";
+type SyncStatus = { kind: SyncStatusKind; text: string };
+
 type MetricKey = "views" | "watch_time_minutes" | "subscribers_net" | "estimated_revenue";
 
 const METRICS: Record<
@@ -71,7 +74,7 @@ export default function ChannelDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [metric, setMetric] = useState<MetricKey>("views");
   const [viewMode, setViewMode] = useState<"table" | "timeline">("table");
 
@@ -102,24 +105,31 @@ export default function ChannelDetailPage({
 
   async function onSync() {
     setSyncing(true);
-    setSyncMsg(null);
+    setSyncStatus(null);
     try {
       const r = await youtube.syncDaily(id, 30);
-      // Best-effort: also pull video list + per-video metrics. Errors here
-      // don't fail the whole sync — the daily metrics are already saved.
       try {
         await youtube.syncFull(id, 180);
       } catch {
         // ignore — videos will populate on next sync
       }
       if (r.skipped) {
-        setSyncMsg(`Skipped: ${r.reason ?? "recently synced"}`);
+        setSyncStatus({ kind: "info", text: `Sync skipped — ${r.reason ?? "recently synced"}.` });
       } else {
-        setSyncMsg(`Synced ${r.inserted_rows ?? 0} day(s).`);
+        setSyncStatus({ kind: "success", text: `Sync complete — refreshed ${r.inserted_rows ?? 0} day${(r.inserted_rows ?? 0) === 1 ? "" : "s"} of data.` });
       }
       await load();
     } catch (err) {
-      setSyncMsg(err instanceof Error ? err.message : "Sync failed");
+      const status = err instanceof ApiError ? err.status : 0;
+      if (status === 401) {
+        setSyncStatus({ kind: "auth", text: "Your YouTube connection has expired. Reconnect this channel to sync again." });
+      } else if (status === 403) {
+        setSyncStatus({ kind: "error", text: "This Google account doesn't have analytics access for this channel." });
+      } else if (status === 429) {
+        setSyncStatus({ kind: "info", text: "Too many sync requests. Please wait a moment and try again." });
+      } else {
+        setSyncStatus({ kind: "error", text: "Sync failed. Please try again shortly." });
+      }
     } finally {
       setSyncing(false);
     }
@@ -220,14 +230,7 @@ export default function ChannelDetailPage({
         </button>
       </header>
 
-      {syncMsg ? (
-        <div
-          className="mb-6 rounded-xl border border-[var(--border)] p-3 text-sm"
-          style={{ background: "rgba(58,119,255,0.06)" }}
-        >
-          {syncMsg}
-        </div>
-      ) : null}
+      {syncStatus ? <SyncBanner status={syncStatus} onDismiss={() => setSyncStatus(null)} /> : null}
 
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Last {DAYS} days
@@ -432,6 +435,58 @@ function VideoTimelineWrapper({
     return <div className="card p-5 text-sm text-[var(--ink-2)]">Loading…</div>;
   }
   return <VideoTimeline videos={videos} />;
+}
+
+function SyncBanner({
+  status,
+  onDismiss,
+}: {
+  status: SyncStatus;
+  onDismiss: () => void;
+}) {
+  const styles: Record<SyncStatusKind, { bg: string; icon: string; iconBg: string; iconColor: string; title: string }> = {
+    success: { bg: "rgba(34,197,94,0.06)", icon: "✓", iconBg: "rgb(220,252,231)", iconColor: "rgb(22,163,74)", title: "Synced" },
+    info: { bg: "rgba(58,119,255,0.06)", icon: "i", iconBg: "rgb(219,234,254)", iconColor: "rgb(37,99,235)", title: "Info" },
+    error: { bg: "rgba(239,68,68,0.06)", icon: "!", iconBg: "rgb(254,226,226)", iconColor: "rgb(220,38,38)", title: "Sync failed" },
+    auth: { bg: "rgba(245,158,11,0.06)", icon: "↻", iconBg: "rgb(254,243,199)", iconColor: "rgb(217,119,6)", title: "Reconnect required" },
+  };
+  const s = styles[status.kind];
+  return (
+    <div
+      role={status.kind === "error" || status.kind === "auth" ? "alert" : "status"}
+      aria-live="polite"
+      className="mb-6 flex items-start gap-3 rounded-xl border border-[var(--border)] p-3 text-sm"
+      style={{ background: s.bg }}
+    >
+      <div
+        aria-hidden="true"
+        className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+        style={{ background: s.iconBg, color: s.iconColor }}
+      >
+        {s.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-[var(--ink)]">{s.title}</div>
+        <div className="mt-0.5 text-[var(--ink-2)]">{status.text}</div>
+        {status.kind === "auth" ? (
+          <Link
+            href="/dashboard/channels"
+            className="mt-2 inline-flex items-center text-[var(--brand,#065fd4)] hover:underline"
+          >
+            Manage channels →
+          </Link>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="ml-2 text-[var(--ink-2)] hover:text-[var(--ink)]"
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
 function KpiCard({
