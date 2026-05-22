@@ -85,7 +85,7 @@ def list_groups(
     group_views: dict[int, int] = {}
     if rows:
         ids = [g.id for g in rows]
-        count_result = session.exec(
+        count_result = session.execute(
             sa.select(
                 ContentGroupItem.content_group_id,
                 sa.func.count(ContentGroupItem.id),
