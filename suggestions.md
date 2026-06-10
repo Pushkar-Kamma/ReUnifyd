@@ -10,6 +10,42 @@ positives were checked and are listed at the end so they are not re-investigated
 
 ---
 
+## Resolution status (updated 2026-06-10)
+
+A first remediation pass landed the safe, non-breaking fixes. Each was validated
+(tsc, eslint, next build, ruff, pyflakes) and pushed separately.
+
+**Fixed**
+- **C1** dev `/test/*` routes now registered only in dev/test environments; `/test/users`
+  no longer returns raw `User` rows (no password hashes). (commit `a673671`)
+- **H1** `/debug/oauth-config` gated out of production; unused `debug.py` deleted. (`a673671`)
+- **H3** token decryption failures are now logged (distinguishable from a missing token). (`a673671`)
+- **M2** `/auth/plan` input bounded with `Field(ge=1, le=25)`. (`a673671`)
+- **M4 (partial) + H2 (partial)** token-refresh now raises a friendly "reconnect" message
+  instead of leaking Google's raw response, and logs the real reason server-side to aid
+  sync debugging. (`f454e16`)
+- **M5** all hardcoded Tailwind palette colors (`emerald/amber/orange/lime/red/green/bg-white`)
+  replaced with theme tokens; added `--ok-soft` / `--warn-soft` / `--danger-soft`. (`7c1ee82`)
+- **M6** command-palette and empty-state emoji replaced with SVG icons; leftover anomaly-badge
+  emoji removed. (`7c1ee82`)
+- **L3** Dockerfile retries `alembic upgrade head` up to 5x on boot (rides out a waking DB),
+  still exits non-zero if all attempts fail. (`39e876c`)
+- **L6** period-switcher dropdown given `max-w-[90vw]`. (`7c1ee82`)
+
+**Intentionally deferred** (riskier or judgment-dependent; not done in this pass)
+- **H2 (full UI)** surfacing a dashboard "reconnect" banner when a channel's sync fails with
+  `reason: "auth"` — this is the highest-value remaining item and the real fix for the
+  reported sync failure, but it is a feature change spanning the sync response shape and the UI.
+- **M1** refusing to start when CORS is `*` + credentials — a startup `raise` could crash boot
+  if env is misconfigured; not currently exploitable (prod uses explicit origins).
+- **M3** disconnect 30-day retention is still not enforced by a purge job (copy vs. job decision).
+- **L1 / L2 / L5** narrowing bare excepts, moving to a lifespan handler, and raw-SQL→ORM are
+  behavior-adjacent refactors left for a dedicated pass.
+- **L4** the secondary chart-series blue (`#2563eb`) is kept as legitimate multi-series data-viz.
+
+---
+
+
 ## 0. Build & validation status (all green)
 
 | Check | Result |
