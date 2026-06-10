@@ -282,7 +282,7 @@ export default function VideoDetailPage({
                   contentStyle={{
                     borderRadius: 12,
                     border: "1px solid var(--border)",
-                    background: "white",
+                    background: "var(--bg)",
                   }}
                 />
                 <Line type="monotone" dataKey="views" stroke="var(--accent)" strokeWidth={2} dot={false} />
@@ -291,7 +291,7 @@ export default function VideoDetailPage({
           </div>
         ) : (
           <div className="grid h-40 place-items-center text-sm text-[var(--ink-2)]">
-            No daily data — click Refresh.
+            No daily data yet. Use Refresh.
           </div>
         )}
       </div>
@@ -347,7 +347,7 @@ export default function VideoDetailPage({
                   contentStyle={{
                     borderRadius: 12,
                     border: "1px solid var(--border)",
-                    background: "white",
+                    background: "var(--bg)",
                   }}
                 />
                 <Area

@@ -323,7 +323,7 @@ function ExploreInner() {
           {DIMENSIONS.find((d) => d.value === dimension)?.label.toLowerCase()}
         </h2>
         {error ? (
-          <div className="text-sm text-red-600">{error}</div>
+          <div className="text-sm text-[var(--danger)]">{error}</div>
         ) : !data ? (
           <div className="h-72 grid place-items-center text-sm text-[var(--ink-2)]">
             Loading…
@@ -353,7 +353,7 @@ function ExploreInner() {
                     contentStyle={{
                       borderRadius: 8,
                       border: "1px solid var(--border)",
-                      background: "white",
+                      background: "var(--bg)",
                       fontSize: 12,
                     }}
                     formatter={(v, name) => [formatCount(Number(v) || 0), name]}
@@ -399,7 +399,7 @@ function ExploreInner() {
                     contentStyle={{
                       borderRadius: 8,
                       border: "1px solid var(--border)",
-                      background: "white",
+                      background: "var(--bg)",
                       fontSize: 12,
                     }}
                     formatter={(v, name) => [formatCount(Number(v) || 0), name]}
@@ -485,7 +485,7 @@ function ExploreInner() {
                 </span>
                 <button
                   onClick={() => removeSaved(v.id)}
-                  className="shrink-0 text-xs text-red-600 hover:underline"
+                  className="shrink-0 text-xs text-[var(--danger)] hover:underline"
                   type="button"
                 >
                   Delete

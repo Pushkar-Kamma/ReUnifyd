@@ -23,6 +23,7 @@ import { ChannelHealthScore } from "@/components/channel-health-score";
 import { PostTimeHeatmap } from "@/components/post-time-heatmap";
 import { ChannelGoals } from "@/components/channel-goals";
 import { TitlePatternInsights } from "@/components/title-pattern-insights";
+import { useDashboardMode } from "@/lib/dashboard-mode";
 
 const DAYS = 28;
 
@@ -68,6 +69,7 @@ export default function ChannelDetailPage({
 }) {
   const { id: idStr } = use(params);
   const id = Number(idStr);
+  const { isAdvanced } = useDashboardMode();
 
   const [channel, setChannel] = useState<Channel | null>(null);
   const [series, setSeries] = useState<DailyMetric[]>([]);
@@ -114,9 +116,9 @@ export default function ChannelDetailPage({
         // ignore — videos will populate on next sync
       }
       if (r.skipped) {
-        setSyncStatus({ kind: "info", text: `Sync skipped — ${r.reason ?? "recently synced"}.` });
+        setSyncStatus({ kind: "info", text: `Sync skipped. ${r.reason ?? "Recently synced"}.` });
       } else {
-        setSyncStatus({ kind: "success", text: `Sync complete — refreshed ${r.inserted_rows ?? 0} day${(r.inserted_rows ?? 0) === 1 ? "" : "s"} of data.` });
+        setSyncStatus({ kind: "success", text: `Sync complete. Refreshed ${r.inserted_rows ?? 0} day${(r.inserted_rows ?? 0) === 1 ? "" : "s"} of data.` });
       }
       await load();
     } catch (err) {
@@ -187,7 +189,7 @@ export default function ChannelDetailPage({
         <Link href="/dashboard/channels" className="text-sm text-[var(--accent)]">
           ← All channels
         </Link>
-        <p className="mt-4 text-red-600">{error ?? "Channel not found."}</p>
+        <p className="mt-4 text-[var(--danger)]">{error ?? "Channel not found."}</p>
       </section>
     );
   }
@@ -263,7 +265,7 @@ export default function ChannelDetailPage({
       </div>
 
       <div className="mb-8">
-        <ChannelHealthScore channelId={id} series={series} />
+        {isAdvanced ? <ChannelHealthScore channelId={id} series={series} /> : null}
       </div>
 
       <div className="card p-5">
@@ -271,20 +273,20 @@ export default function ChannelDetailPage({
           <h3 className="text-base font-semibold">
             Daily {METRICS[metric].label.toLowerCase()}
           </h3>
-          {hasData && projection ? (
+          {hasData && projection && isAdvanced ? (
             <span
               className="text-xs text-[var(--ink-2)]"
               title={`Linear extrapolation from last ${series.length} days. Recent 7d vs first 7d trend: ${projection.trend >= 0 ? "+" : ""}${projection.trend.toFixed(0)}%`}
             >
               Projected next 30d: <span className="font-semibold text-[var(--ink-1)]">{METRICS[metric].format(projection.total30)}</span>
-              <span className={projection.trend >= 0 ? "ml-2 text-green-600" : "ml-2 text-red-600"}>
+              <span className={projection.trend >= 0 ? "ml-2 text-[var(--ok)]" : "ml-2 text-[var(--danger)]"}>
                 {projection.trend >= 0 ? "↗" : "↘"} {projection.trend >= 0 ? "+" : ""}{projection.trend.toFixed(0)}%
               </span>
             </span>
           ) : null}
           {!hasData ? (
             <span className="text-xs text-[var(--ink-2)]">
-              No data yet — click “Sync now”
+              No data yet. Use Sync now.
             </span>
           ) : null}
         </div>
@@ -312,7 +314,7 @@ export default function ChannelDetailPage({
                   contentStyle={{
                     borderRadius: 12,
                     border: "1px solid var(--border)",
-                    background: "white",
+                    background: "var(--bg)",
                   }}
                 />
                 <Line
@@ -333,57 +335,61 @@ export default function ChannelDetailPage({
         )}
       </div>
 
-      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
-        Audience
-      </h2>
-      <AudienceInsights channelId={id} refreshKey={channel.last_synced_at ?? ""} />
+      {isAdvanced ? (
+        <>
+          <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+            Audience
+          </h2>
+          <AudienceInsights channelId={id} refreshKey={channel.last_synced_at ?? ""} />
 
-      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
-        Content mix
-      </h2>
-      <ContentTypeBreakdown channelId={id} refreshKey={channel.last_synced_at ?? ""} />
+          <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+            Content mix
+          </h2>
+          <ContentTypeBreakdown channelId={id} refreshKey={channel.last_synced_at ?? ""} />
 
-      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
-        Upload schedule
-      </h2>
-      <PostTimeHeatmap channelId={id} />
+          <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+            Upload schedule
+          </h2>
+          <PostTimeHeatmap channelId={id} />
 
-      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
-        Title patterns
-      </h2>
-      <TitlePatternInsights channelId={id} />
+          <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+            Title patterns
+          </h2>
+          <TitlePatternInsights channelId={id} />
 
-      <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
-        Goals
-      </h2>
-      <ChannelGoals
-        channelId={id}
-        currentSubscribers={channel.subscriber_count ?? 0}
-        currentViews30d={totals.views}
-      />
+          <h2 className="mt-10 mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
+            Goals
+          </h2>
+          <ChannelGoals
+            channelId={id}
+            currentSubscribers={channel.subscriber_count ?? 0}
+            currentViews30d={totals.views}
+          />
+        </>
+      ) : null}
 
       <h2 className="mt-10 mb-3 flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-[var(--ink-2)]">
         Videos
-        <div className="flex gap-2">
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-[var(--border)] p-0.5 normal-case">
           <button
             onClick={() => setViewMode("table")}
-            className={`text-xs px-2 py-1 rounded transition ${
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
               viewMode === "table"
-                ? "bg-[var(--accent)] text-white"
-                : "bg-[var(--bg-2)] hover:bg-[var(--bg-1)]"
+                ? "bg-[var(--contrast)] text-[var(--on-contrast)]"
+                : "text-[var(--ink-2)] hover:text-[var(--ink-1)]"
             }`}
           >
-            📋 Table
+            Table
           </button>
           <button
             onClick={() => setViewMode("timeline")}
-            className={`text-xs px-2 py-1 rounded transition ${
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
               viewMode === "timeline"
-                ? "bg-[var(--accent)] text-white"
-                : "bg-[var(--bg-2)] hover:bg-[var(--bg-1)]"
+                ? "bg-[var(--contrast)] text-[var(--on-contrast)]"
+                : "text-[var(--ink-2)] hover:text-[var(--ink-1)]"
             }`}
           >
-            ⏱️ Timeline
+            Timeline
           </button>
         </div>
       </h2>

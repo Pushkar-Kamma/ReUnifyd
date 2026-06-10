@@ -249,7 +249,7 @@ function CompareInner() {
                     contentStyle={{
                       borderRadius: 8,
                       border: "1px solid var(--border)",
-                      background: "white",
+                      background: "var(--bg)",
                       fontSize: 12,
                     }}
                   />

@@ -68,9 +68,9 @@ function ChannelsContent() {
           className="mb-6 rounded-xl border border-[var(--border)] p-4 text-sm"
           style={{ background: "rgba(34,197,94,0.08)" }}
         >
-          ✓ YouTube connected. Channels listed below.{" "}
+          YouTube connected. Channels listed below.{" "}
           <span className="text-[var(--ink-2)]">
-            Data is syncing in the background — views and metrics will appear within a minute.
+            Data is syncing in the background. Views and metrics will appear within a minute.
           </span>
         </div>
       ) : null}
@@ -89,7 +89,7 @@ function ChannelsContent() {
       ) : null}
 
       {error ? (
-        <div className="card p-5 text-sm text-red-600" role="alert">
+        <div className="card p-5 text-sm text-[var(--danger)]" role="alert">
           {error}
         </div>
       ) : loading ? (

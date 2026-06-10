@@ -128,7 +128,7 @@ function OverviewInner() {
       // Reload after a short delay to pick up fresh data
       setTimeout(() => { void load(); setSyncMsg(null); }, 60_000);
     } catch {
-      setSyncMsg("Sync failed — check your connection.");
+      setSyncMsg("Sync failed. Check your connection.");
     } finally {
       setSyncing(false);
     }
@@ -204,7 +204,7 @@ function OverviewInner() {
           <p className="mt-1 text-sm text-[var(--ink-2)]">
             {selectedChannelId === "all"
               ? `Across all your channels in the last ${data.days} days.`
-              : `Showing ${data.channels[0]?.title ?? "selected channel"} — last ${data.days} days.`}
+              : `Showing ${data.channels[0]?.title ?? "selected channel"}. Last ${data.days} days.`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -329,7 +329,7 @@ function OverviewInner() {
                 contentStyle={{
                   borderRadius: 8,
                   border: "1px solid var(--border)",
-                  background: "white",
+                  background: "var(--bg)",
                   fontSize: 12,
                 }}
                 formatter={(v, name) => [METRICS[metric].format(Number(v) || 0), name]}

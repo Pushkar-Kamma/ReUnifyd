@@ -353,7 +353,7 @@ export default function GroupDetailPage({
                     contentStyle={{
                       borderRadius: 10,
                       border: "1px solid var(--border)",
-                      background: "white",
+                      background: "var(--bg)",
                       fontSize: 12,
                     }}
                   />
@@ -646,7 +646,7 @@ function AddVideoModal({
       onClick={onClose}
     >
       <div
-        className="card w-full max-w-2xl bg-white p-5"
+        className="card w-full max-w-2xl bg-[var(--bg)] p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
