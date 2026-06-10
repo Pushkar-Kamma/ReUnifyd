@@ -22,6 +22,9 @@
   --ok: #15935a;
   --warn: #d98324;
   --danger: #b91c1c;         /* deeper crimson — distinct from brand red */
+  --ok-soft: rgba(21, 147, 90, 0.12);
+  --warn-soft: rgba(217, 131, 36, 0.13);
+  --danger-soft: rgba(185, 28, 28, 0.10);
 }
 
 html[data-theme="dark"] {
@@ -42,6 +45,9 @@ html[data-theme="dark"] {
   --ok: #34d27f;
   --warn: #f0a830;
   --danger: #f2554d;
+  --ok-soft: rgba(52, 210, 127, 0.16);
+  --warn-soft: rgba(240, 168, 48, 0.16);
+  --danger-soft: rgba(242, 85, 77, 0.16);
   color-scheme: dark;
 }
 

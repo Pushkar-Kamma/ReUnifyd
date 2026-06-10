@@ -48,7 +48,7 @@ export function AdBlockerBanner() {
 
   return (
     <div
-      className="sticky top-0 z-50 border-b border-amber-300 bg-amber-100 px-4 py-2.5 text-sm text-amber-900"
+      className="sticky top-0 z-50 border-b border-[var(--warn)] bg-[var(--warn-soft)] px-4 py-2.5 text-sm text-[var(--ink-1)]"
       role="alert"
     >
       <div className="mx-auto flex w-[min(1280px,96vw)] items-center justify-between gap-3">
@@ -63,7 +63,7 @@ export function AdBlockerBanner() {
             sessionStorage.setItem(STORAGE_KEY, "1");
             setBlocked(false);
           }}
-          className="shrink-0 rounded-md border border-amber-400 px-2.5 py-1 text-xs font-semibold hover:bg-amber-200"
+          className="shrink-0 rounded-md border border-[var(--warn)] px-2.5 py-1 text-xs font-semibold hover:bg-[var(--warn-soft)]"
         >
           Dismiss
         </button>

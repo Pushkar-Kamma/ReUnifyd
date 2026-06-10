@@ -116,7 +116,7 @@ export function VideoTimeline({ videos }: { videos: VideoSummary[] }) {
 
                 {/* Views bar + stats */}
                 {isHovered && (
-                  <div className="absolute -top-16 left-0 z-10 flex flex-col gap-1 rounded border border-[var(--border)] bg-white p-2 shadow-lg whitespace-nowrap text-xs">
+                  <div className="absolute -top-16 left-0 z-10 flex flex-col gap-1 rounded border border-[var(--border)] bg-[var(--bg)] p-2 shadow-lg whitespace-nowrap text-xs">
                     <div className="font-semibold">{formatCount(video.views ?? 0)} views</div>
                     <div className="text-[var(--ink-2)]">
                       {formatCount(video.likes ?? 0)} likes

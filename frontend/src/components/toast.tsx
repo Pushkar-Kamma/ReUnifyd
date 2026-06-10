@@ -62,8 +62,8 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
   }, [toast.id, onDismiss]);
 
   const colors: Record<ToastKind, string> = {
-    success: "bg-green-600 text-white",
-    error: "bg-red-600 text-white",
+    success: "bg-[var(--ok)] text-white",
+    error: "bg-[var(--danger)] text-white",
     info: "bg-[var(--ink-1)] text-white",
   };
   const icons: Record<ToastKind, string> = {

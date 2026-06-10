@@ -163,7 +163,7 @@ export default function GroupDetailPage({
         <Link href="/dashboard/groups" className="text-sm text-[var(--accent)]">
           ← All groups
         </Link>
-        <p className="mt-4 text-red-600">{error ?? "Group not found."}</p>
+        <p className="mt-4 text-[var(--danger)]">{error ?? "Group not found."}</p>
       </section>
     );
   }
@@ -392,7 +392,7 @@ export default function GroupDetailPage({
                       key={it.item_id}
                       className={[
                         "border-t border-[var(--border)]",
-                        isWin ? "bg-amber-50/40" : "",
+                        isWin ? "bg-[var(--warn-soft)]" : "",
                       ].join(" ")}
                     >
                       <td className="px-4 py-3">
@@ -426,7 +426,7 @@ export default function GroupDetailPage({
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => void onRemoveItem(it.item_id)}
-                          className="text-xs text-[var(--ink-3)] hover:text-red-600 hover:underline"
+                          className="text-xs text-[var(--ink-3)] hover:text-[var(--danger)] hover:underline"
                         >
                           Remove
                         </button>
@@ -476,7 +476,7 @@ function WinnerBanner({
   const periodWord = period === 0 ? "lifetime" : `last ${period} days`;
 
   return (
-    <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
+    <div className="mb-4 flex items-center gap-3 rounded-xl border border-[var(--warn)] bg-[var(--warn-soft)] px-5 py-3">
       <span className="text-2xl">🏆</span>
       <div>
         <span className="font-semibold">
@@ -527,7 +527,7 @@ function ComparisonCard({
     <div
       className={[
         "card relative flex flex-col gap-3 overflow-hidden p-4",
-        isWinner ? "ring-2 ring-amber-400" : "",
+        isWinner ? "ring-2 ring-[var(--warn)]" : "",
       ].join(" ")}
     >
       {/* Color stripe */}
@@ -574,7 +574,7 @@ function ComparisonCard({
 
       <button
         onClick={onRemove}
-        className="mt-auto self-end text-xs text-[var(--ink-3)] hover:text-red-600 hover:underline"
+        className="mt-auto self-end text-xs text-[var(--ink-3)] hover:text-[var(--danger)] hover:underline"
       >
         Remove
       </button>
@@ -838,7 +838,7 @@ function FragmentRow({
       <div className="px-2 text-center text-xs text-[var(--ink-2)]">
         <div>{label}</div>
         {winner !== "tie" && delta > 0 ? (
-          <div className="mt-0.5 text-[10px] text-emerald-600">
+          <div className="mt-0.5 text-[10px] text-[var(--ok)]">
             {winner === "a" ? "←" : "→"} +{delta.toFixed(0)}%
           </div>
         ) : null}

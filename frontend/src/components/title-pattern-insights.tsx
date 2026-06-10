@@ -114,8 +114,8 @@ export function TitlePatternInsights({ channelId }: { channelId: number }) {
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
                   positive
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-red-100 text-red-700"
+                    ? "bg-[var(--ok-soft)] text-[var(--ok)]"
+                    : "bg-[var(--danger-soft)] text-[var(--danger)]"
                 }`}
               >
                 {positive ? "+" : ""}

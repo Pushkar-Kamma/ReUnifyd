@@ -437,7 +437,7 @@ function VideoTimelineWrapper({
 
   if (error) {
     return (
-      <div className="card p-5 text-sm text-red-600" role="alert">
+      <div className="card p-5 text-sm text-[var(--danger)]" role="alert">
         {error}
       </div>
     );

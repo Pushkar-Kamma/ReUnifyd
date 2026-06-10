@@ -5,22 +5,48 @@ import { useRouter } from "next/navigation";
 import { youtube, type Channel } from "@/lib/youtube";
 import { groups as groupsApi } from "@/lib/groups";
 
+type CmdIconName = "overview" | "channels" | "groups" | "compare" | "explore" | "sync";
+
 type Item = {
   id: string;
   label: string;
   hint?: string;
   href: string;
-  icon?: string;
+  icon?: CmdIconName;
   keywords?: string;
 };
 
+function CmdIcon({ name }: { name?: CmdIconName }) {
+  const c = {
+    width: 16, height: 16, viewBox: "0 0 24 24", fill: "none",
+    stroke: "currentColor", strokeWidth: 1.7,
+    strokeLinecap: "round" as const, strokeLinejoin: "round" as const,
+  };
+  switch (name) {
+    case "overview":
+      return (<svg {...c}><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>);
+    case "compare":
+      return (<svg {...c}><line x1="6" y1="20" x2="6" y2="11"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>);
+    case "channels":
+      return (<svg {...c}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="m17 2-5 5-5-5"/></svg>);
+    case "groups":
+      return (<svg {...c}><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>);
+    case "explore":
+      return (<svg {...c}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>);
+    case "sync":
+      return (<svg {...c}><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>);
+    default:
+      return (<svg {...c}><circle cx="12" cy="12" r="3"/></svg>);
+  }
+}
+
 const STATIC_ITEMS: Item[] = [
-  { id: "p:overview", label: "Overview", href: "/dashboard", icon: "▦", keywords: "home dashboard" },
-  { id: "p:channels", label: "Channels", href: "/dashboard/channels", icon: "📺" },
-  { id: "p:groups", label: "Content groups", href: "/dashboard/groups", icon: "🔗" },
-  { id: "p:compare", label: "Compare", href: "/dashboard/compare", icon: "⇄" },
-  { id: "p:explore", label: "Advanced mode", href: "/dashboard/explore", icon: "🔭" },
-  { id: "p:sync", label: "Sync status", href: "/dashboard/sync", icon: "↻" },
+  { id: "p:overview", label: "Overview", href: "/dashboard", icon: "overview", keywords: "home dashboard" },
+  { id: "p:channels", label: "Channels", href: "/dashboard/channels", icon: "channels" },
+  { id: "p:groups", label: "Content groups", href: "/dashboard/groups", icon: "groups" },
+  { id: "p:compare", label: "Compare", href: "/dashboard/compare", icon: "compare" },
+  { id: "p:explore", label: "Explore", href: "/dashboard/explore", icon: "explore" },
+  { id: "p:sync", label: "Sync status", href: "/dashboard/sync", icon: "sync" },
 ];
 
 function score(query: string, text: string): number {
@@ -87,14 +113,14 @@ export function CommandPalette() {
         label: c.title || "Untitled channel",
         hint: "Channel",
         href: `/dashboard/channels/${c.id}`,
-        icon: "📺",
+        icon: "channels" as const,
       })),
       ...groups.map((g) => ({
         id: `g:${g.id}`,
         label: g.name,
         hint: "Group",
         href: `/dashboard/groups/${g.id}`,
-        icon: "🔗",
+        icon: "groups" as const,
       })),
     ];
     const all = [...STATIC_ITEMS, ...dynamic];
@@ -168,7 +194,7 @@ export function CommandPalette() {
                       : "text-[var(--ink-1)] hover:bg-[var(--bg-2)]"
                   }`}
                 >
-                  <span className="w-5 text-center">{it.icon ?? "•"}</span>
+                  <span className="grid w-5 place-items-center text-[var(--ink-2)]"><CmdIcon name={it.icon} /></span>
                   <span className="flex-1 truncate">{it.label}</span>
                   {it.hint ? (
                     <span className="shrink-0 text-xs text-[var(--ink-3)]">

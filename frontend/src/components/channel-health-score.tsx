@@ -11,12 +11,12 @@ type Props = {
 type Grade = "A+" | "A" | "B" | "C" | "D" | "F";
 
 function letterGrade(score: number): { grade: Grade; color: string } {
-  if (score >= 92) return { grade: "A+", color: "text-emerald-600" };
-  if (score >= 85) return { grade: "A", color: "text-emerald-600" };
-  if (score >= 70) return { grade: "B", color: "text-lime-600" };
-  if (score >= 55) return { grade: "C", color: "text-amber-600" };
-  if (score >= 40) return { grade: "D", color: "text-orange-600" };
-  return { grade: "F", color: "text-red-600" };
+  if (score >= 92) return { grade: "A+", color: "text-[var(--ok)]" };
+  if (score >= 85) return { grade: "A", color: "text-[var(--ok)]" };
+  if (score >= 70) return { grade: "B", color: "text-[var(--ok)]" };
+  if (score >= 55) return { grade: "C", color: "text-[var(--warn)]" };
+  if (score >= 40) return { grade: "D", color: "text-[var(--warn)]" };
+  return { grade: "F", color: "text-[var(--danger)]" };
 }
 
 /**

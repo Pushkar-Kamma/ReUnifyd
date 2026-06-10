@@ -69,7 +69,7 @@ export default function NewGroupPage() {
           />
         </label>
         {error ? (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-[var(--danger)]" role="alert">
             {error}
           </p>
         ) : null}

@@ -253,7 +253,7 @@ export function VideosTable({
 
   if (error) {
     return (
-      <div className="card p-5 text-sm text-red-600" role="alert">
+      <div className="card p-5 text-sm text-[var(--danger)]" role="alert">
         {error}
       </div>
     );
@@ -274,7 +274,6 @@ export function VideosTable({
   if (rows.length === 0) {
     return (
       <EmptyState
-        icon="🎬"
         title="No videos yet"
         description="Sync this channel to pull in its videos and analytics."
       />
@@ -400,7 +399,7 @@ export function VideosTable({
                 >
                   Eng. rate
                   <span className="text-[var(--ink-2)]/80">ⓘ</span>
-                  <span className="pointer-events-none absolute right-0 top-full z-10 mt-2 hidden w-64 rounded-md border border-[var(--border)] bg-white p-2.5 text-left text-xs font-normal normal-case tracking-normal text-[var(--ink-1)] shadow-lg group-hover:block group-focus-within:block">
+                  <span className="pointer-events-none absolute right-0 top-full z-10 mt-2 hidden w-64 rounded-md border border-[var(--border)] bg-[var(--bg)] p-2.5 text-left text-xs font-normal normal-case tracking-normal text-[var(--ink-1)] shadow-lg group-hover:block group-focus-within:block">
                     Engagement rate — industry standard.
                     <br />
                     <span className="font-mono">(likes + comments) ÷ views × 100</span>
@@ -444,24 +443,24 @@ export function VideosTable({
                         if (a.kind === "spike") {
                           return (
                             <span
-                              className="ml-1 shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700"
+                              className="ml-1 shrink-0 rounded-full bg-[var(--warn-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--warn)]"
                               title={`Outperforming cohort by ${a.ratio.toFixed(1)}× the median`}
                             >
-                              🔥 Spike
+                              Spike
                             </span>
                           );
                         }
                         return (
                           <span
-                            className="ml-1 shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700"
+                            className="ml-1 shrink-0 rounded-full bg-[var(--bg-2)] px-2 py-0.5 text-xs font-semibold text-[var(--ink-2)]"
                             title={`Underperforming — ${(a.ratio * 100).toFixed(0)}% of the median`}
                           >
-                            📉 Low
+                            Low
                           </span>
                         );
                       })()}
                       {isShort ? (
-                        <span className="ml-1 shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                        <span className="ml-1 shrink-0 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--accent)]">
                           Short
                         </span>
                       ) : v.duration_seconds ? (
@@ -527,7 +526,7 @@ export function VideosTable({
           <div className="card max-h-80 w-96 overflow-y-auto p-5">
             <h3 id="group-modal-title" className="mb-4 text-lg font-semibold">Add to group</h3>
             {groupsError && (
-              <div className="mb-3 rounded bg-red-100 p-2 text-sm text-red-700">
+              <div className="mb-3 rounded bg-[var(--danger-soft)] p-2 text-sm text-[var(--danger)]">
                 {groupsError}
               </div>
             )}

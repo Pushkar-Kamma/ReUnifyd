@@ -31,7 +31,7 @@ function PeriodSwitcherInner() {
           {match.label}
           <span className="text-[var(--ink-2)]">⌄</span>
         </summary>
-        <div className="absolute right-0 z-30 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--border)] bg-white shadow-lg">
+        <div className="absolute right-0 z-30 mt-1 w-44 max-w-[90vw] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg)] shadow-lg">
           {PRESETS.map((p) => (
             <button
               key={p.days}

@@ -115,7 +115,7 @@ export default function GroupsPage() {
       )}
 
       {error ? (
-        <div className="card p-5 text-sm text-red-600" role="alert">{error}</div>
+        <div className="card p-5 text-sm text-[var(--danger)]" role="alert">{error}</div>
       ) : items === null ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -124,7 +124,6 @@ export default function GroupsPage() {
         </div>
       ) : items.length === 0 ? (
         <EmptyState
-          icon="📊"
           title="No content groups yet"
           description="Create a group and add the same video from multiple channels to see which version performs better."
           actionLabel="Create your first group"
@@ -163,7 +162,7 @@ function GroupCard({
         </Link>
         <button
           onClick={() => onDelete(g.id)}
-          className="shrink-0 rounded p-1 text-xs text-[var(--ink-3)] hover:bg-red-50 hover:text-red-600"
+          className="shrink-0 rounded p-1 text-xs text-[var(--ink-3)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
           title="Delete group"
         >
           ✕

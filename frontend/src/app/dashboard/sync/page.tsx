@@ -68,7 +68,7 @@ export default function SyncStatusPage() {
     return (
       <section className="mx-auto w-[min(1120px,92vw)] py-10">
         <h1 className="mb-4 text-2xl font-bold tracking-tight">Sync status</h1>
-        <div className="card p-5 text-sm text-red-600">{error}</div>
+        <div className="card p-5 text-sm text-[var(--danger)]">{error}</div>
       </section>
     );
   }
@@ -90,7 +90,6 @@ export default function SyncStatusPage() {
       <section className="mx-auto w-[min(1120px,92vw)] py-10">
         <h1 className="mb-4 text-2xl font-bold tracking-tight">Sync status</h1>
         <EmptyState
-          icon="📺"
           title="No channels connected"
           description="Connect a YouTube channel to start syncing analytics."
           actionLabel="Go to channels"
@@ -127,14 +126,14 @@ export default function SyncStatusPage() {
             : null;
           const freshness =
             ageHrs == null
-              ? { label: "Never synced", color: "bg-gray-200 text-gray-700" }
+              ? { label: "Never synced", color: "bg-[var(--bg-2)] text-[var(--ink-2)]" }
               : ageHrs < 6
-                ? { label: "Fresh", color: "bg-emerald-100 text-emerald-700" }
+                ? { label: "Fresh", color: "bg-[var(--ok-soft)] text-[var(--ok)]" }
                 : ageHrs < 24
-                  ? { label: "Recent", color: "bg-lime-100 text-lime-700" }
+                  ? { label: "Recent", color: "bg-[var(--ok-soft)] text-[var(--ok)]" }
                   : ageHrs < 72
-                    ? { label: "Stale", color: "bg-amber-100 text-amber-700" }
-                    : { label: "Outdated", color: "bg-red-100 text-red-700" };
+                    ? { label: "Stale", color: "bg-[var(--warn-soft)] text-[var(--warn)]" }
+                    : { label: "Outdated", color: "bg-[var(--danger-soft)] text-[var(--danger)]" };
           return (
             <li
               key={c.id}

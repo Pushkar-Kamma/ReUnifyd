@@ -157,7 +157,7 @@ export default function VideoDetailPage({
         <Link href="/dashboard/channels" className="text-sm text-[var(--accent)]">
           ← Channels
         </Link>
-        <p className="mt-4 text-red-600">{error ?? "Video not found."}</p>
+        <p className="mt-4 text-[var(--danger)]">{error ?? "Video not found."}</p>
       </section>
     );
   }

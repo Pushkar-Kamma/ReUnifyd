@@ -112,7 +112,7 @@ export function OnboardingChecklist() {
             <span
               className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] ${
                 s.done
-                  ? "bg-emerald-500 text-white"
+                  ? "bg-[var(--ok)] text-white"
                   : "border border-[var(--border)] text-[var(--ink-3)]"
               }`}
               aria-hidden

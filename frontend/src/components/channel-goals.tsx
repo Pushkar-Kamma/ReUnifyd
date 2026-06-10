@@ -197,11 +197,11 @@ export function ChannelGoals({
                   </div>
                   <div className="text-xs text-[var(--ink-2)]">
                     {reached ? (
-                      <span className="font-semibold text-emerald-600">
-                        ✓ Reached
+                      <span className="font-semibold text-[var(--ok)]">
+                        Reached
                       </span>
                     ) : daysLeft < 0 ? (
-                      <span className="font-semibold text-red-600">
+                      <span className="font-semibold text-[var(--danger)]">
                         Past due ({-daysLeft}d)
                       </span>
                     ) : (
@@ -209,7 +209,7 @@ export function ChannelGoals({
                     )}
                     <button
                       onClick={() => onDelete(g.id)}
-                      className="ml-2 text-[var(--ink-3)] hover:text-red-600"
+                      className="ml-2 text-[var(--ink-3)] hover:text-[var(--danger)]"
                       title="Delete goal"
                       aria-label="Delete goal"
                     >
@@ -220,7 +220,7 @@ export function ChannelGoals({
                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--bg-2)]">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      reached ? "bg-emerald-500" : "bg-[var(--accent)]"
+                      reached ? "bg-[var(--ok)]" : "bg-[var(--accent)]"
                     }`}
                     style={{ width: `${pct}%` }}
                   />
