@@ -24,5 +24,8 @@ COPY . .
 ENV PORT=8000
 EXPOSE 8000
 
-# Run migrations then start the server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
+# Run migrations (with a short retry to ride out transient DB connection
+# blips, e.g. a paused DB waking up) then start the server. If every attempt
+# fails, exit non-zero so the platform restarts us instead of booting without
+# an up-to-date schema.
+CMD ["sh", "-c", "ok=0; for i in 1 2 3 4 5; do alembic upgrade head && { ok=1; break; }; echo \"migration attempt $i failed, retrying in 5s\"; sleep 5; done; if [ \"$ok\" != \"1\" ]; then echo 'migrations failed after retries'; exit 1; fi; exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
