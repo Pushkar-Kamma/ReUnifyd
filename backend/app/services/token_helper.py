@@ -129,7 +129,14 @@ async def _refresh_with_google(request: Request | None, refresh_token: str) -> d
             err = resp.json()
         except Exception:
             err = {"error": resp.text}
-        raise RuntimeError(f"Failed to refresh access token: {err}")
+        # Log the real reason server-side (helps diagnose sync failures) but do
+        # not surface Google's raw response to the client.
+        _log.warning("Token refresh failed (status=%s): %s", resp.status_code, err)
+        if isinstance(err, dict) and err.get("error") == "invalid_grant":
+            raise RuntimeError(
+                "Your YouTube connection has expired. Please reconnect this channel."
+            )
+        raise RuntimeError("Could not refresh your YouTube connection. Please reconnect this channel.")
     return resp.json()
 
 
