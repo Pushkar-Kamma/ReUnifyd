@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime as dt
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
@@ -182,6 +182,22 @@ def _link_user_channel_owner(session: Session, user_id: int, channel_id: int) ->
     if not existing:
         session.add(UserChannel(user_id=user_id, channel_id=channel_id, role="owner"))
         session.flush()
+
+
+def _plan_for_channels(n: int) -> tuple[str, int]:
+    """Map a desired channel count to a (plan_name, channel_quota) pair.
+
+    Mirrors the tiers shown on the pricing page. Billing is bypassed during
+    early access, so this only records the user's intended plan.
+    """
+    n = max(1, min(int(n), 25))
+    if n <= 1:
+        return "free", 1
+    if n <= 3:
+        return "creator", 3
+    if n <= 10:
+        return "pro", 10
+    return "studio", 25
 
 
 def _safe_next_url(candidate: str | None, *, default_path: str = "/dashboard/channels") -> str:
@@ -521,13 +537,46 @@ def logout(req: Request):
 @router.get("/me")
 def me(user_id: int = Depends(require_user_id), session: Session = Depends(get_session)):
     u = session.get(User, user_id)
+    channel_count = len(
+        session.exec(select(UserChannel).where(UserChannel.user_id == user_id)).all()
+    )
     return {
         "ok": True,
         "user_id": user_id,
         "email": getattr(u, "email", None),
         "name": getattr(u, "name", None),
+        "plan": getattr(u, "plan", "free"),
+        "channel_quota": getattr(u, "channel_quota", 1),
+        "channel_count": channel_count,
         # legacy fields removed in new schema:
         "link_quota": None,
         "manual_refresh_date": None,
         "manual_refresh_count": 0,
     }
+
+
+class PlanIn(BaseModel):
+    channels: int
+
+
+@router.post("/plan")
+def set_plan(
+    body: PlanIn,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Persist the plan implied by a desired channel count.
+
+    Called from the sign-up wizard / welcome flow. Payment is not collected
+    during early access; this only records the user's choice so it survives
+    across devices and sessions.
+    """
+    plan, quota = _plan_for_channels(body.channels)
+    u = session.get(User, user_id)
+    if not u:
+        raise HTTPException(status_code=404, detail="user not found")
+    u.plan = plan
+    u.channel_quota = quota
+    session.add(u)
+    session.commit()
+    return {"ok": True, "plan": plan, "channel_quota": quota}

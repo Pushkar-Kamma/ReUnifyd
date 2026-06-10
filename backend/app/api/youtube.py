@@ -221,6 +221,51 @@ def get_channel(
         },
     }
 
+
+@router.delete("/channels/{channel_id}")
+def disconnect_channel(
+    channel_id: int,
+    user_id: int = Depends(require_user_id),
+    session: Session = Depends(get_session),
+):
+    """Disconnect a channel from the current user.
+
+    Removes the user's link to the channel. If no other user is linked, the
+    channel is deactivated so syncing stops. Metrics are retained (not purged)
+    so the user can reconnect within the retention window before any cleanup.
+    """
+    link = session.exec(
+        select(UserChannel).where(
+            UserChannel.user_id == user_id,
+            UserChannel.channel_id == channel_id,
+        )
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="channel not found")
+
+    session.delete(link)
+    session.flush()
+
+    # If nobody else owns this channel, stop syncing it.
+    others = session.exec(
+        select(UserChannel).where(UserChannel.channel_id == channel_id)
+    ).all()
+    deactivated = False
+    if not others:
+        ch = session.get(Channel, channel_id)
+        if ch and ch.is_active:
+            ch.is_active = False
+            session.add(ch)
+            deactivated = True
+
+    session.commit()
+    return {
+        "ok": True,
+        "disconnected": True,
+        "deactivated": deactivated,
+        "data_retained_days": 30,
+    }
+
 # ----------------------------
 # Audience insights (live; not stored)
 # ----------------------------

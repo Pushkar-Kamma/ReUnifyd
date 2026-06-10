@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { youtube, type Channel } from "@/lib/youtube";
 import { apiUrl } from "@/lib/api";
+import { auth } from "@/lib/auth";
 import { useAuth } from "@/lib/auth-context";
 import { AuthShell } from "@/components/auth-shell";
 
@@ -34,6 +35,19 @@ export default function WelcomePage() {
       // ignore
     }
   }, []);
+
+  // Persist the chosen plan to the backend once we know the user is signed in.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    try {
+      const saved = Number(window.localStorage.getItem(WANT_CHANNELS_KEY));
+      if (saved >= 1 && saved <= 25) {
+        void auth.setPlan(saved).catch(() => {});
+      }
+    } catch {
+      // best effort
+    }
+  }, [authLoading, user]);
 
   const load = useCallback(async () => {
     setLoading(true);

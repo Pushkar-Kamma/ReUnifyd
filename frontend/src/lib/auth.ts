@@ -5,6 +5,9 @@ export type Me = {
   user_id: number;
   email: string | null;
   name: string | null;
+  plan?: string;
+  channel_quota?: number;
+  channel_count?: number;
 };
 
 export const auth = {
@@ -18,6 +21,13 @@ export const auth = {
     api<{ ok: true; user_id: number; email: string }>("/auth/login", {
       method: "POST",
       body: JSON.stringify(data),
+    }),
+
+  /** Persist the plan implied by a desired channel count. */
+  setPlan: (channels: number) =>
+    api<{ ok: true; plan: string; channel_quota: number }>("/auth/plan", {
+      method: "POST",
+      body: JSON.stringify({ channels }),
     }),
 
   logout: () =>

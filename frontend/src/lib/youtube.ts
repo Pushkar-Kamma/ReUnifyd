@@ -44,6 +44,13 @@ export const youtube = {
   channel: (id: number) =>
     api<{ ok: true; channel: Channel }>(`/youtube/channels/${id}`),
 
+  /** Disconnect a channel from the current user. Data is retained 30 days. */
+  disconnect: (id: number) =>
+    api<{ ok: true; disconnected: boolean; deactivated: boolean; data_retained_days: number }>(
+      `/youtube/channels/${id}`,
+      { method: "DELETE" },
+    ),
+
   syncDaily: (channelId: number, days: number = 30) =>
     api<{ ok: boolean; inserted_rows?: number; skipped?: boolean; reason?: string }>(
       `/youtube/sync/daily?channel_id=${channelId}&days=${days}`,

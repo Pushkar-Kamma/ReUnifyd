@@ -12,7 +12,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import CHAR, JSONB, NUMERIC, TIMESTAMP, VARCHAR
-from sqlalchemy.types import JSON, BigInteger
+from sqlalchemy.types import JSON, BigInteger, Integer
 from sqlmodel import Field, SQLModel
 
 # ------------------------------------------------------------------
@@ -36,6 +36,17 @@ class User(SQLModel, table=True):
     name: str | None = None
     email: str = Field(index=True, unique=True, nullable=False)
     password_hash: str | None = None
+
+    # Subscription plan. Billing is bypassed during early access; these persist
+    # the plan the user selected and how many channels it allows.
+    plan: str = Field(
+        default="free",
+        sa_column=Column(VARCHAR(16), nullable=False, server_default="free"),
+    )
+    channel_quota: int = Field(
+        default=1,
+        sa_column=Column(Integer, nullable=False, server_default="1"),
+    )
 
     created_at: dt.datetime = Field(
         sa_column=Column(
