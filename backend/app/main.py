@@ -124,7 +124,10 @@ def db_ping():
     return {"db": "ok"}
 
 # --- Routers ---
-app.include_router(test_db_router)
+# Test/seed routes are dev-only: they are unauthenticated and must never be
+# exposed in production (they can enumerate users).
+if settings.ENVIRONMENT.lower() in {"dev", "development", "local", "test"}:
+    app.include_router(test_db_router)
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(youtube_router, prefix="/youtube", tags=["youtube"])
 app.include_router(content_groups_router)
@@ -138,6 +141,10 @@ def root():
 # --- Debug ---
 @app.get("/debug/oauth-config")
 def debug_oauth_config():
+    # Config introspection is sensitive; only expose it outside production.
+    if settings.ENVIRONMENT.lower() in {"prod", "production"}:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="not found")
     cid = getattr(settings, "google_client_id", getattr(settings, "GOOGLE_CLIENT_ID", "")) or ""
     has_secret = bool(getattr(settings, "google_client_secret", getattr(settings, "GOOGLE_CLIENT_SECRET", None)))
     redirect_url = getattr(settings, "redirect_uri", getattr(settings, "OAUTH_REDIRECT_URL", None))

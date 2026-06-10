@@ -6,7 +6,7 @@ import datetime as dt
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import Session, select
 
 from app.api.deps import require_user_id
@@ -556,7 +556,7 @@ def me(user_id: int = Depends(require_user_id), session: Session = Depends(get_s
 
 
 class PlanIn(BaseModel):
-    channels: int
+    channels: int = Field(ge=1, le=25)
 
 
 @router.post("/plan")

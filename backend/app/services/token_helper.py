@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
 
 import httpx
 from fastapi import Request
@@ -16,6 +17,8 @@ from ..db.models import (
     Platform,
     PlatformAccount,
 )
+
+_log = logging.getLogger(__name__)
 
 # Small expiry skew so we don't hand out almost-expired tokens
 _SKEW = dt.timedelta(seconds=90)
@@ -68,6 +71,9 @@ def _get_cached_access_token(cred: OAuthCredential) -> str | None:
     try:
         return decrypt_str(enc)
     except Exception:
+        # A decryption failure (e.g. FERNET_KEY rotated) is not the same as a
+        # missing token. Log it so the cause is diagnosable instead of silent.
+        _log.error("Failed to decrypt access token for credential id=%s", getattr(cred, "id", "?"))
         return None
 
 def _get_refresh_token(cred: OAuthCredential) -> str | None:
@@ -77,6 +83,7 @@ def _get_refresh_token(cred: OAuthCredential) -> str | None:
     try:
         return decrypt_str(enc)
     except Exception:
+        _log.error("Failed to decrypt refresh token for credential id=%s", getattr(cred, "id", "?"))
         return None
 
 

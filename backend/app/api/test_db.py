@@ -19,4 +19,6 @@ def seed_user(session: Session = Depends(get_session)):
 
 @router.get("/users")
 def list_users(session: Session = Depends(get_session)):
-    return session.exec(select(User)).all()
+    # Never return raw User rows (they include password_hash). Dev-only route.
+    rows = session.exec(select(User)).all()
+    return [{"id": u.id, "email": u.email, "name": u.name} for u in rows]
