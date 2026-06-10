@@ -164,7 +164,7 @@ export function ChannelGoals({
               className="mt-1 w-full rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5 text-sm"
             />
           </label>
-          <button type="submit" className="btn primary self-end">
+          <button type="submit" className="btn accent self-end">
             Save
           </button>
         </form>

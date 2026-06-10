@@ -110,7 +110,7 @@ export default function SyncStatusPage() {
         </div>
         <button
           onClick={() => void syncAll()}
-          className="btn primary"
+          className="btn accent"
           disabled={Object.values(states).some((s) => s === "syncing")}
         >
           Sync all

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
-/** Auth-aware nav buttons used in shared headers (.btn / .btn primary styles). */
+/** Auth-aware nav buttons used in shared headers (.btn / .btn accent styles). */
 export function AuthNav() {
   const { user, loading, logout } = useAuth();
 
@@ -29,7 +29,7 @@ export function AuthNav() {
       <Link href="/login" className="btn">
         Log in
       </Link>
-      <Link href="/signup" className="btn primary">
+      <Link href="/signup" className="btn accent">
         Sign up
       </Link>
     </>

@@ -68,7 +68,7 @@ function ChannelsContent() {
       {linked && !oauthError ? (
         <div
           className="mb-6 rounded-xl border border-[var(--border)] p-4 text-sm"
-          style={{ background: "rgba(34,197,94,0.08)" }}
+          style={{ background: "var(--ok-soft)" }}
         >
           YouTube connected. Channels listed below.{" "}
           <span className="text-[var(--ink-2)]">
@@ -80,7 +80,7 @@ function ChannelsContent() {
       {oauthError ? (
         <div
           className="mb-6 rounded-xl border border-[var(--border)] p-4 text-sm"
-          style={{ background: "rgba(239,68,68,0.08)" }}
+          style={{ background: "var(--danger-soft)" }}
           role="alert"
         >
           OAuth failed: <span className="font-mono">{oauthError}</span>{" "}

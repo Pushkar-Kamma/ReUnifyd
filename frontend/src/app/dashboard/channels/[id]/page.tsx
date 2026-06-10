@@ -456,10 +456,10 @@ function SyncBanner({
   onDismiss: () => void;
 }) {
   const styles: Record<SyncStatusKind, { bg: string; icon: string; iconBg: string; iconColor: string; title: string }> = {
-    success: { bg: "rgba(34,197,94,0.06)", icon: "✓", iconBg: "rgb(220,252,231)", iconColor: "rgb(22,163,74)", title: "Synced" },
-    info: { bg: "rgba(120,120,120,0.08)", icon: "i", iconBg: "rgb(229,231,235)", iconColor: "rgb(75,85,99)", title: "Info" },
-    error: { bg: "rgba(239,68,68,0.06)", icon: "!", iconBg: "rgb(254,226,226)", iconColor: "rgb(220,38,38)", title: "Sync failed" },
-    auth: { bg: "rgba(245,158,11,0.06)", icon: "↻", iconBg: "rgb(254,243,199)", iconColor: "rgb(217,119,6)", title: "Reconnect required" },
+    success: { bg: "var(--ok-soft)", icon: "✓", iconBg: "var(--ok-soft)", iconColor: "var(--ok)", title: "Synced" },
+    info: { bg: "var(--bg-2)", icon: "i", iconBg: "var(--bg-2)", iconColor: "var(--ink-2)", title: "Info" },
+    error: { bg: "var(--danger-soft)", icon: "!", iconBg: "var(--danger-soft)", iconColor: "var(--danger)", title: "Sync failed" },
+    auth: { bg: "var(--warn-soft)", icon: "↻", iconBg: "var(--warn-soft)", iconColor: "var(--warn)", title: "Reconnect required" },
   };
   const s = styles[status.kind];
   return (

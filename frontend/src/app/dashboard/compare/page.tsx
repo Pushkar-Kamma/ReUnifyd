@@ -137,7 +137,7 @@ function CompareInner() {
             }}
             className="btn-sm text-xs"
           >
-            📊 Top 3
+            Top 3
           </button>
           <button
             onClick={() => {
@@ -150,13 +150,13 @@ function CompareInner() {
             }}
             className="btn-sm text-xs"
           >
-            ⭐ Top 5
+            Top 5
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
             className="btn-sm text-xs"
           >
-            ✕ Clear
+            Clear
           </button>
         </div>
 

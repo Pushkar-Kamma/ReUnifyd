@@ -216,7 +216,10 @@ export function NotificationBell() {
         aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
         aria-expanded={open}
       >
-        🔔
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </svg>
         {unread > 0 ? (
           <span className="absolute -right-1 -top-1 grid h-4 min-w-[16px] place-items-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold text-white">
             {unread > 9 ? "9+" : unread}
@@ -262,7 +265,12 @@ export function NotificationBell() {
                       {n.kind === "spike" ? (
                         <>
                           <div className="flex items-center gap-2">
-                            <span>🔥</span>
+                            <span className="text-[var(--warn)]" aria-hidden="true">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                <polyline points="17 6 23 6 23 12" />
+                              </svg>
+                            </span>
                             <span className="font-semibold">Trending video</span>
                             {isUnread ? (
                               <span className="ml-auto h-2 w-2 rounded-full bg-[var(--accent)]" />
@@ -279,7 +287,13 @@ export function NotificationBell() {
                       ) : (
                         <>
                           <div className="flex items-center gap-2">
-                            <span>🎯</span>
+                            <span className="text-[var(--ok)]" aria-hidden="true">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <circle cx="12" cy="12" r="5" />
+                                <circle cx="12" cy="12" r="1" />
+                              </svg>
+                            </span>
                             <span className="font-semibold">Goal reached</span>
                             {isUnread ? (
                               <span className="ml-auto h-2 w-2 rounded-full bg-[var(--accent)]" />

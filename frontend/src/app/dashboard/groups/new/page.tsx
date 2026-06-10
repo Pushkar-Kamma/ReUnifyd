@@ -79,7 +79,7 @@ export default function NewGroupPage() {
           </Link>
           <button
             type="submit"
-            className="btn primary"
+            className="btn accent"
             disabled={submitting}
           >
             {submitting ? "Creating…" : "Create group"}

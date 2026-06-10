@@ -83,7 +83,7 @@ export default function GroupsPage() {
             Group videos posted across channels to compare performance side by side.
           </p>
         </div>
-        <Link href="/dashboard/groups/new" className="btn primary">
+        <Link href="/dashboard/groups/new" className="btn accent">
           + New group
         </Link>
       </div>

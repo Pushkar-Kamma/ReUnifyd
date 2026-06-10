@@ -49,6 +49,26 @@ function engagementRate(item: ContentGroupItem): number {
   return ((item.likes + item.comments + item.shares) / item.views) * 100;
 }
 
+function AwardIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="inline-block text-[var(--warn)]"
+    >
+      <circle cx="12" cy="8" r="6" />
+      <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+    </svg>
+  );
+}
+
 export default function GroupDetailPage({
   params,
 }: {
@@ -193,7 +213,7 @@ export default function GroupDetailPage({
               <button
                 onClick={() => void onSaveName()}
                 disabled={saving || !draftName.trim()}
-                className="btn primary text-sm"
+                className="btn accent text-sm"
               >
                 {saving ? "Saving…" : "Save"}
               </button>
@@ -242,7 +262,7 @@ export default function GroupDetailPage({
               </button>
             ))}
           </div>
-          <button onClick={() => setShowAdd(true)} className="btn primary text-sm">
+          <button onClick={() => setShowAdd(true)} className="btn accent text-sm">
             + Add video
           </button>
         </div>
@@ -254,7 +274,7 @@ export default function GroupDetailPage({
           <p className="mb-4 text-sm text-[var(--ink-2)]">
             Add 2+ videos that represent the same content across channels to compare them.
           </p>
-          <button onClick={() => setShowAdd(true)} className="btn primary">
+          <button onClick={() => setShowAdd(true)} className="btn accent">
             Add a video
           </button>
         </div>
@@ -412,7 +432,7 @@ export default function GroupDetailPage({
                         {it.channel_title ?? `#${it.channel_id}`}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">
-                        {isWin ? "🏆 " : ""}{formatCount(it.views)}
+                        {isWin ? <AwardIcon size={13} /> : null}{isWin ? " " : ""}{formatCount(it.views)}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatCount(Math.round(it.watch_time_minutes / 60))}
@@ -477,7 +497,7 @@ function WinnerBanner({
 
   return (
     <div className="mb-4 flex items-center gap-3 rounded-xl border border-[var(--warn)] bg-[var(--warn-soft)] px-5 py-3">
-      <span className="text-2xl">🏆</span>
+      <AwardIcon size={22} />
       <div>
         <span className="font-semibold">
           {winner.channel_title ?? `Channel #${winner.channel_id}`}
@@ -534,7 +554,7 @@ function ComparisonCard({
       <div className="absolute left-0 top-0 h-full w-1" style={{ background: color }} />
 
       {isWinner ? (
-        <span className="absolute right-3 top-3 text-sm">🏆</span>
+        <span className="absolute right-3 top-3"><AwardIcon size={16} /></span>
       ) : null}
 
       {/* Thumbnail */}

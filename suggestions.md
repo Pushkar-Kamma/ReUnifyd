@@ -10,6 +10,35 @@ positives were checked and are listed at the end so they are not re-investigated
 
 ---
 
+## Second sweep (2026-06-10, after first remediation)
+
+A follow-up exhaustive sweep was run. Build/type/lint were all green
+(FE tsc/eslint/build = 0, BE ruff/pyflakes/import = 0). The remaining items were
+redesign-consistency gaps, all low-risk, and were **fixed in this pass**:
+
+- **Button class consistency:** 8 dashboard/auth CTAs still used the old
+  `btn primary` (black) class; converted to `btn accent` to match the redesign,
+  and updated the stale JSDoc in `auth-nav.tsx`.
+- **Emoji used as UI icons** (the redesign rule is SVG-only): converted the
+  notification **bell** button, the spike + goal notification icons, the group
+  **winner trophies** (new `AwardIcon`), and the theme-toggle **sun/moon** to SVG.
+  Removed decorative emoji from buttons (`Save view`, `Top 3`, `Top 5`, `Clear`,
+  `Sync all`).
+- **Label fix:** the Explore page heading said "Advanced mode"; the user-facing
+  mode label is "Detailed", so the heading is now "Explore" (its route name).
+- **Undefined CSS class:** the compare presets used `btn-sm`, which was never
+  defined; added a `.btn-sm` style so those buttons are actually styled.
+- **Dark-mode tints:** the channel-detail SyncBanner and the channels-page
+  success/error banners used hardcoded `rgb()/rgba()`; switched to the new
+  `--ok-soft` / `--warn-soft` / `--danger-soft` tokens.
+
+Verified still-clean (no action): backend IDOR/ownership checks, `JSON.parse`
+guards, `useEffect` cleanup patterns, image alt text, em dashes in copy. The
+typographic glyphs that remain (checkmark, close, edit, plus) are monochrome text
+symbols, not emoji, and were intentionally left.
+
+---
+
 ## Resolution status (updated 2026-06-10)
 
 A first remediation pass landed the safe, non-breaking fixes. Each was validated

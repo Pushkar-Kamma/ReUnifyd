@@ -233,7 +233,7 @@ function OverviewInner() {
             className="btn"
             style={{ opacity: syncing ? 0.6 : 1 }}
           >
-            {syncing ? "⟳ Syncing…" : "↻ Sync all"}
+            {syncing ? "Syncing…" : "Sync all"}
           </button>
         </div>
       </header>
