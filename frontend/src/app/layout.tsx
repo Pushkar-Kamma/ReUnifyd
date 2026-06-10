@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ReUnifyd — One dashboard for every channel",
+  title: "ReUnifyd · One dashboard for every channel",
   description:
-    "Unify your YouTube, Instagram, and TikTok analytics. Compare the same content across platforms — side by side.",
+    "Analytics for creators who run more than one channel. See what is growing, catch what is slipping, and compare your channels in one place.",
 };
 
 export default function RootLayout({
