@@ -122,7 +122,7 @@ export function PostTimeHeatmap({ channelId }: { channelId: number }) {
                   const bg =
                     cell.count === 0
                       ? "var(--bg-2)"
-                      : `rgba(6, 95, 212, ${intensity.toFixed(2)})`;
+                      : `rgba(224, 50, 46, ${intensity.toFixed(2)})`;
                   const title =
                     cell.count === 0
                       ? `${dLabel} ${hourLabel(h)}: no uploads`

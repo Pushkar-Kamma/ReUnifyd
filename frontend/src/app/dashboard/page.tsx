@@ -26,8 +26,8 @@ import {
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
 
 const SERIES_COLORS = [
-  "#065fd4", // YT blue
-  "#c00f0c", // YT red
+  "#e0322e", // brand red
+  "#2563eb", // blue
   "#16a34a",
   "#f59e0b",
   "#8b5cf6",

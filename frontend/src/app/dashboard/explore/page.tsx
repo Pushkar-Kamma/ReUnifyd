@@ -53,8 +53,8 @@ const GROUPS: Array<{ value: ExploreGroupBy; label: string }> = [
 ];
 
 const SERIES_COLORS = [
-  "#065fd4",
-  "#c00f0c",
+  "#e0322e",
+  "#2563eb",
   "#16a34a",
   "#f59e0b",
   "#8b5cf6",

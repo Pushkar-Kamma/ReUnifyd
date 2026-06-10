@@ -205,7 +205,7 @@ export default function VideoDetailPage({
       {syncMsg ? (
         <div
           className="mb-6 rounded-xl border border-[var(--border)] p-3 text-sm"
-          style={{ background: "rgba(58,119,255,0.06)" }}
+          style={{ background: "var(--accent-soft)" }}
         >
           {syncMsg}
         </div>

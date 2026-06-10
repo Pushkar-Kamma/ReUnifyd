@@ -446,7 +446,7 @@ function SyncBanner({
 }) {
   const styles: Record<SyncStatusKind, { bg: string; icon: string; iconBg: string; iconColor: string; title: string }> = {
     success: { bg: "rgba(34,197,94,0.06)", icon: "✓", iconBg: "rgb(220,252,231)", iconColor: "rgb(22,163,74)", title: "Synced" },
-    info: { bg: "rgba(58,119,255,0.06)", icon: "i", iconBg: "rgb(219,234,254)", iconColor: "rgb(37,99,235)", title: "Info" },
+    info: { bg: "rgba(120,120,120,0.08)", icon: "i", iconBg: "rgb(229,231,235)", iconColor: "rgb(75,85,99)", title: "Info" },
     error: { bg: "rgba(239,68,68,0.06)", icon: "!", iconBg: "rgb(254,226,226)", iconColor: "rgb(220,38,38)", title: "Sync failed" },
     auth: { bg: "rgba(245,158,11,0.06)", icon: "↻", iconBg: "rgb(254,243,199)", iconColor: "rgb(217,119,6)", title: "Reconnect required" },
   };
@@ -471,7 +471,7 @@ function SyncBanner({
         {status.kind === "auth" ? (
           <Link
             href="/dashboard/channels"
-            className="mt-2 inline-flex items-center text-[var(--brand,#065fd4)] hover:underline"
+            className="mt-2 inline-flex items-center text-[var(--accent)] hover:underline"
           >
             Manage channels →
           </Link>

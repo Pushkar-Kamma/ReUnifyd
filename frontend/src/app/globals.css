@@ -1,50 +1,66 @@
 @import "tailwindcss";
 
 /* =============================================================
-   ReUnifyd theme — YT Studio inspired (clean, white, minimal)
+   ReUnifyd theme — soft white / black + refined red accent.
+   No pure #000 / #fff / #f00 — easy on the eyes, premium feel.
    ============================================================= */
 :root {
-  --bg: #ffffff;
-  --bg-2: #f4f4f5;          /* subtle gray for headers, hover */
-  --bg-3: #fafafa;          /* page background */
-  --ink-1: #0f0f0f;          /* near-black, YT body */
-  --ink-2: #606060;          /* YT secondary text */
-  --ink-3: #909090;          /* tertiary / icons */
-  --accent: #065fd4;         /* YT studio blue */
-  --accent-2: #1c83f5;
-  --ring: rgba(6, 95, 212, 0.25);
-  --border: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.16);
-  --ok: #16a34a;
-  --warn: #f59e0b;
-  --danger: #c00f0c;
+  --bg: #ffffff;            /* card / raised surface */
+  --bg-2: #f5f4f2;          /* warm off-white: hover, headers */
+  --bg-3: #fbfaf9;          /* page background (soft warm white) */
+  --ink-1: #1c1b1a;          /* soft near-black body text */
+  --ink-2: #5c5a57;          /* secondary text */
+  --ink-3: #908d89;          /* tertiary / icons */
+  --accent: #e0322e;         /* refined red (brand accent) */
+  --accent-2: #c52a26;       /* darker red for hover/active */
+  --accent-soft: rgba(224, 50, 46, 0.08); /* tinted highlight surface */
+  --ring: rgba(224, 50, 46, 0.22);
+  --contrast: #1c1b1a;       /* high-contrast surface (primary btn) */
+  --on-contrast: #ffffff;    /* text on contrast surface */
+  --border: rgba(0, 0, 0, 0.07);
+  --border-strong: rgba(0, 0, 0, 0.14);
+  --ok: #15935a;
+  --warn: #d98324;
+  --danger: #b91c1c;         /* deeper crimson — distinct from brand red */
 }
 
 html[data-theme="dark"] {
-  --bg: #0f0f0f;
-  --bg-2: #1f1f1f;
-  --bg-3: #181818;
-  --ink-1: #f1f1f1;
-  --ink-2: #aaaaaa;
-  --ink-3: #717171;
-  --accent: #3ea6ff;
-  --accent-2: #65b7ff;
-  --ring: rgba(62, 166, 255, 0.3);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  --ok: #22c55e;
-  --warn: #fbbf24;
-  --danger: #ef4444;
+  --bg: #17171a;            /* soft black card surface */
+  --bg-2: #1f1f23;          /* hover / headers */
+  --bg-3: #0f0f10;          /* page background (soft black) */
+  --ink-1: #f1f0ee;          /* off-white body text */
+  --ink-2: #a8a6a2;          /* secondary text */
+  --ink-3: #6f6d69;          /* tertiary / icons */
+  --accent: #f25a52;         /* brightened red for dark surfaces */
+  --accent-2: #ff6f67;
+  --accent-soft: rgba(242, 90, 82, 0.14);
+  --ring: rgba(242, 90, 82, 0.32);
+  --contrast: #f1f0ee;       /* high-contrast surface flips in dark */
+  --on-contrast: #17171a;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.17);
+  --ok: #34d27f;
+  --warn: #f0a830;
+  --danger: #f2554d;
   color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
   --color-ink-1: var(--ink-1);
   --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --color-contrast: var(--contrast);
+  --color-on-contrast: var(--on-contrast);
+  --color-border: var(--border);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
   --font-sans: var(--font-inter), "Inter", Roboto, system-ui, -apple-system,
     "Segoe UI", Helvetica, Arial, sans-serif;
 }
@@ -89,12 +105,12 @@ body {
   cursor: not-allowed;
 }
 .btn.primary {
-  color: white;
-  border-color: var(--ink-1);
-  background: var(--ink-1);
+  color: var(--on-contrast);
+  border-color: var(--contrast);
+  background: var(--contrast);
 }
 .btn.primary:hover {
-  background: #333;
+  opacity: 0.88;
 }
 .btn.accent {
   color: white;
@@ -103,6 +119,13 @@ body {
 }
 .btn.accent:hover {
   background: var(--accent-2);
+}
+.btn.lg {
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 22px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 /* ----- Card (flat, clean, no shadows by default) ----- */
