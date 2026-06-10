@@ -23,6 +23,8 @@ import { ChannelHealthScore } from "@/components/channel-health-score";
 import { PostTimeHeatmap } from "@/components/post-time-heatmap";
 import { ChannelGoals } from "@/components/channel-goals";
 import { TitlePatternInsights } from "@/components/title-pattern-insights";
+import { PlatformBadge } from "@/components/platform-badge";
+import { platformOf } from "@/lib/platform";
 import { useDashboardMode } from "@/lib/dashboard-mode";
 
 const DAYS = 28;
@@ -218,17 +220,20 @@ export default function ChannelDetailPage({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-3xl font-bold tracking-tight">
-            {channel.title || "Untitled channel"}
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="truncate text-3xl font-bold tracking-tight">
+              {channel.title || "Untitled channel"}
+            </h1>
+            <PlatformBadge platform={platformOf(channel)} />
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--ink-2)]">
             {channel.custom_url ? <span>{channel.custom_url}</span> : null}
             <span>· {formatCount(channel.subscriber_count)} subscribers</span>
             <span>· synced {relativeTime(channel.last_synced_at)}</span>
           </div>
         </div>
-        <button onClick={onSync} disabled={syncing} className="btn primary">
-          {syncing ? "Syncing…" : "Sync now"}
+        <button onClick={onSync} disabled={syncing} className="btn accent">
+          {syncing ? "Syncing" : "Sync now"}
         </button>
       </header>
 

@@ -8,6 +8,8 @@ import { youtube, type Channel } from "@/lib/youtube";
 import { ApiError, apiUrl } from "@/lib/api";
 import { formatCount, relativeTime } from "@/lib/format";
 import { ChannelSparkline } from "@/components/channel-sparkline";
+import { PlatformIcon } from "@/components/platform-badge";
+import { platformOf, PLATFORM_LIST } from "@/lib/platform";
 
 function ChannelsContent() {
   const params = useSearchParams();
@@ -53,7 +55,7 @@ function ChannelsContent() {
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
           <h1 className="mb-1 text-3xl font-bold tracking-tight">Channels</h1>
-          <p className="text-[var(--ink-2)]">Your linked YouTube channels.</p>
+          <p className="text-[var(--ink-2)]">All the channels you have connected.</p>
         </div>
         <a
           href={apiUrl(`/auth/google/init?next=${encodeURIComponent("/dashboard/channels")}`)}
@@ -93,13 +95,16 @@ function ChannelsContent() {
           {error}
         </div>
       ) : loading ? (
-        <div className="card p-5 text-sm text-[var(--ink-2)]">Loading channels…</div>
+        <div className="card p-5 text-sm text-[var(--ink-2)]">Loading channels</div>
       ) : channels && channels.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {channels.map((c) => (
-            <ChannelCard key={c.id} channel={c} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {channels.map((c) => (
+              <ChannelCard key={c.id} channel={c} />
+            ))}
+          </div>
+          <MorePlatforms />
+        </>
       ) : (
         <EmptyState />
       )}
@@ -131,9 +136,16 @@ function ChannelCard({ channel }: { channel: Channel }) {
         )}
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold">{channel.title || "Untitled channel"}</div>
-          {channel.custom_url ? (
-            <div className="truncate text-xs text-[var(--ink-2)]">{channel.custom_url}</div>
-          ) : null}
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span style={{ color: "var(--accent)" }}>
+              <PlatformIcon platform={platformOf(channel)} size={13} />
+            </span>
+            {channel.custom_url ? (
+              <span className="truncate text-xs text-[var(--ink-2)]">{channel.custom_url}</span>
+            ) : (
+              <span className="truncate text-xs text-[var(--ink-2)]">YouTube</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -145,7 +157,7 @@ function ChannelCard({ channel }: { channel: Channel }) {
         <div className="text-right text-xs text-[var(--ink-2)]">
           {channel.last_synced_at
             ? `synced ${relativeTime(channel.last_synced_at)}`
-            : <span className="animate-pulse text-amber-600">⟳ syncing…</span>}
+            : <span className="animate-pulse text-[var(--warn)]">syncing</span>}
         </div>
       </div>
 
@@ -159,6 +171,69 @@ function ChannelCard({ channel }: { channel: Channel }) {
   );
 }
 
+function MorePlatforms() {
+  const [joined, setJoined] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("reunifyd:platform-waitlist");
+      if (raw) setJoined(JSON.parse(raw));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  function toggle(id: string) {
+    setJoined((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        window.localStorage.setItem("reunifyd:platform-waitlist", JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
+
+  const upcoming = PLATFORM_LIST.filter((p) => p.status === "soon");
+  if (upcoming.length === 0) return null;
+
+  return (
+    <div className="mt-8 rounded-2xl border border-[var(--border)] p-6">
+      <h2 className="text-lg font-semibold tracking-tight">More platforms coming</h2>
+      <p className="mt-1 text-sm text-[var(--ink-2)]">
+        ReUnifyd is built to track every platform you create on. Join the
+        waitlist and we will let you know the moment these are ready.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {upcoming.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] px-4 py-3"
+          >
+            <div className="flex items-center gap-2.5">
+              <span style={{ color: p.color }}>
+                <PlatformIcon platform={p.id} size={20} />
+              </span>
+              <div>
+                <div className="text-sm font-medium">{p.label}</div>
+                <div className="text-xs text-[var(--ink-3)]">Coming soon</div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggle(p.id)}
+              className={`btn ${joined[p.id] ? "" : "accent"} whitespace-nowrap`}
+            >
+              {joined[p.id] ? "On the list" : "Notify me"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <div className="card p-8 text-center">
@@ -166,7 +241,7 @@ function EmptyState() {
       <p className="mb-4 text-sm text-[var(--ink-2)]">
         Connect your YouTube account to pull in your channels.
       </p>
-      <Link href="/dashboard" className="btn primary">
+      <Link href="/dashboard" className="btn accent">
         Go to dashboard
       </Link>
     </div>
@@ -176,7 +251,7 @@ function EmptyState() {
 export default function ChannelsPage() {
   return (
     <Suspense
-      fallback={<div className="px-6 py-16 text-center text-[var(--ink-2)]">Loading…</div>}
+      fallback={<div className="px-6 py-16 text-center text-[var(--ink-2)]">Loading</div>}
     >
       <ChannelsContent />
     </Suspense>
