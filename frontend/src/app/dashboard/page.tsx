@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { useDays } from "@/components/period-switcher";
 import { useAuth } from "@/lib/auth-context";
+import { useDashboardMode } from "@/lib/dashboard-mode";
 import { ApiError, api, apiUrl } from "@/lib/api";
 import { formatCount } from "@/lib/format";
 import {
@@ -64,7 +65,7 @@ function pctDelta(cur: number, prev: number): number | null {
 
 function DeltaPill({ pct }: { pct: number | null }) {
   if (pct == null) {
-    return <span className="text-xs text-[var(--ink-2)]">—</span>;
+    return <span className="text-xs text-[var(--ink-2)]">no change</span>;
   }
   const up = pct >= 0;
   return (
@@ -79,6 +80,7 @@ function DeltaPill({ pct }: { pct: number | null }) {
 
 function OverviewInner() {
   const { user } = useAuth();
+  const { isAdvanced } = useDashboardMode();
   const days = useDays(28);
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +162,7 @@ function OverviewInner() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-6xl p-6 text-sm text-red-600" role="alert">
+      <div className="mx-auto max-w-6xl p-6 text-sm text-[var(--danger)]" role="alert">
         {error}
       </div>
     );
@@ -168,7 +170,7 @@ function OverviewInner() {
   if (!data) {
     return (
       <div className="mx-auto max-w-6xl p-6 text-sm text-[var(--ink-2)]">
-        Loading…
+        Loading
       </div>
     );
   }
@@ -213,7 +215,7 @@ function OverviewInner() {
               onChange={(e) =>
                 setSelectedChannelId(e.target.value === "all" ? "all" : Number(e.target.value))
               }
-              className="rounded-lg border border-[var(--border)] bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+              className="rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
             >
               <option value="all">All channels</option>
               {allChannels.map((c) => (
@@ -275,25 +277,27 @@ function OverviewInner() {
       </div>
 
       {/* Quick stats cards */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard
-          label="Lifetime views"
-          value={formatCount(data.lifetime_views)}
-          subtext="All-time across all videos"
-        />
-        <StatCard
-          label="Videos"
-          value={data.video_count}
-          subtext={`${formatCount(data.avg_views_per_video)} avg views`}
-        />
-        {data.top_channel ? (
+      {isAdvanced ? (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
-            label="Top channel"
-            value={data.top_channel.title || "Untitled"}
-            subtext={`${formatCount(data.top_channel.views)} views (${data.days}d)`}
+            label="Lifetime views"
+            value={formatCount(data.lifetime_views)}
+            subtext="All-time across all videos"
           />
-        ) : null}
-      </div>
+          <StatCard
+            label="Videos"
+            value={data.video_count}
+            subtext={`${formatCount(data.avg_views_per_video)} avg views`}
+          />
+          {data.top_channel ? (
+            <StatCard
+              label="Top channel"
+              value={data.top_channel.title || "Untitled"}
+              subtext={`${formatCount(data.top_channel.views)} views (${data.days}d)`}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Multi-line chart: one line per channel */}
       <div className="card mb-6 p-5">
@@ -358,11 +362,26 @@ function OverviewInner() {
         </div>
       </div>
 
-      {/* Two-col: leaderboard + top videos */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]">
-        <ChannelsLeaderboard channels={data.channels} />
-        <TopVideosCard videos={data.top_videos} />
-      </div>
+      {/* Two-col: leaderboard + top videos (detailed mode only) */}
+      {isAdvanced ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr]">
+          <ChannelsLeaderboard channels={data.channels} />
+          <TopVideosCard videos={data.top_videos} />
+        </div>
+      ) : (
+        <div className="card flex items-center justify-between gap-4 p-5">
+          <div>
+            <h2 className="text-base font-semibold">Want the full picture?</h2>
+            <p className="mt-1 text-sm text-[var(--ink-2)]">
+              Switch to Detailed to see the channel leaderboard, top videos,
+              retention, and more.
+            </p>
+          </div>
+          <Link href="/dashboard/channels" className="btn whitespace-nowrap">
+            View channels
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
